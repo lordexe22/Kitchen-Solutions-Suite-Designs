@@ -1,0 +1,143 @@
+@startuml utilities
+skinparam classAttributeIconSize 0
+
+class CloudinaryImageModule {
+
+  +createImage(
+    image: ImageInput,
+    options: ImageCreateOptions,
+    metadata: ImageMetadata
+  ): ImageResource
+
+  +deleteImage(
+    publicId: PublicId
+  ): DeleteResult
+
+  +renameImage(
+    publicId: PublicId,
+    newName: FileName
+  ): ImageResource
+
+  +modifyPrefix(
+    publicId: PublicId,
+    newPrefix: Prefix
+  ): ImageResource
+
+  +modifyFolder(
+    publicId: PublicId,
+    newFolder: FolderPath
+  ): ImageResource
+
+  +modifyMetadata(
+    publicId: PublicId,
+    metadata: ImageMetadata,
+    mode: MetadataUpdateMode
+  ): ImageResource
+
+  +replaceImage(
+    publicId: PublicId,
+    image: ImageInput,
+    options: ImageReplaceOptions,
+    metadata: ImageMetadata
+  ): ImageResource
+}
+
+class ImageInput {
+  type: ImageInputType
+  value: any
+}
+
+enum ImageInputType {
+  URL
+  BYTES
+  STREAM
+}
+
+class ImageCreateOptions {
+  folder: FolderPath
+  prefix: Prefix
+  filename: FileName
+  format: ImageFormat
+  transformations: ImageTransformations
+  cacheTTL: CacheTTL
+}
+
+class ImageReplaceOptions {
+  transformations: ImageTransformations
+  cacheTTL: CacheTTL
+  invalidateCache: boolean
+}
+
+class ImageTransformations {
+  width: number
+  height: number
+  crop: CropMode
+  quality: number
+}
+
+enum CropMode {
+  FIT
+  FILL
+  SCALE
+  CROP
+}
+
+enum ImageFormat {
+  JPG
+  PNG
+  WEBP
+  AVIF
+}
+
+class ImageMetadata {
+  tags: string[]
+  context: map
+  expirationDate: datetime
+}
+
+enum MetadataUpdateMode {
+  MERGE
+  REPLACE
+}
+
+class ImageResource {
+  publicId: PublicId
+  url: URL
+  format: ImageFormat
+  width: number
+  height: number
+  metadata: ImageMetadata
+}
+
+class DeleteResult {
+  success: boolean
+}
+
+class PublicId {
+  value: string
+}
+
+class FolderPath {
+  value: string
+}
+
+class Prefix {
+  value: string
+}
+
+class FileName {
+  value: string
+}
+
+class CacheTTL {
+  seconds: number
+}
+
+CloudinaryImageModule --> ImageInput
+CloudinaryImageModule --> ImageCreateOptions
+CloudinaryImageModule --> ImageReplaceOptions
+CloudinaryImageModule --> ImageMetadata
+CloudinaryImageModule --> ImageResource
+CloudinaryImageModule --> DeleteResult
+
+@enduml
