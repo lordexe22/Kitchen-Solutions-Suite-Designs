@@ -1,0 +1,101 @@
+@startuml list-images-flow
+!pragma teoz true
+
+title listImages - Detailed Flow
+note right
+  **Audiencia**: Developers tocando lógica de listado
+  **Complejidad**: Alta (paginación + filtros + normalización)
+end note
+
+actor Consumer
+participant "listImages" as list
+participant "_validateFolderPath" as vFolder
+participant "getCloudinaryClient" as client
+participant "api.resources" as apiResources
+participant "_normalizeListImageResult" as normalize
+
+Consumer -> list: { folder, recursive?, limit?, cursor? }
+
+== Validation Phase ==
+list -> vFolder: folder
+vFolder --> list: ✓ válido
+
+alt limit < 1 || limit > 100
+  list --> Consumer: ValidationError
+end
+
+list -> list: limit = limit ?? 20
+
+== Build API Request ==
+list -> list: prefix = folder/
+list -> list: options = { type, resource_type, prefix, max_results, context }
+
+alt cursor provided
+  list -> list: options.next_cursor = cursor
+end
+
+== Call Cloudinary API ==
+list -> client: getCloudinaryClient()
+client --> list: cloudinary
+
+list -> apiResources: (options)
+
+alt Error 404 (folder vacío)
+  apiResources --> list: error 404
+  list --> Consumer: { items: [], nextCursor: undefined }
+else ConfigurationError
+  apiResources --> list: ConfigurationError
+  list --> Consumer: ConfigurationError (re-throw)
+else Network/Auth/Server Error
+  apiResources --> list: error
+  list --> Consumer: FetchImageError
+else Success
+  apiResources --> list: { resources, next_cursor }
+end
+
+== Normalize and Filter ==
+loop for each raw in resources
+  alt raw.resource_type !== 'image'
+    list -> list: continue (skip)
+  end
+  
+  alt !recursive && publicId contains / after prefix
+    list -> list: continue (skip subdirectory)
+  end
+  
+  alt !raw.public_id
+    list -> list: continue (skip incomplete)
+  end
+  
+  list -> normalize: raw
+  alt normalized = null (incomplete resource)
+    normalize --> list: null
+    list -> list: continue (skip)
+  else normalized valid
+    normalize --> list: GetImageResult
+    list -> list: items.push(normalized)
+  end
+end
+
+== Apply Limit Post-Filter ==
+note over list
+  Cloudinary puede retornar más recursos
+  Aplicamos limit después de filtros
+end note
+
+list -> list: finalItems = items.slice(0, limit)
+list -> list: nextCursor = response.next_cursor ?? undefined
+
+list --> Consumer: { items: finalItems, nextCursor }
+
+note over Consumer
+  **Garantías**:
+  - Limit respetado (post-filtro)
+  - Solo resource_type=image
+  - Subdirectorios filtrados si !recursive
+  - Recursos incompletos filtrados silenciosamente
+  - 404 → array vacío (no error)
+  - Cursor para paginación
+end note
+
+@enduml

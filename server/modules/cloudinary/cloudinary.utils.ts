@@ -8,7 +8,6 @@ import type {
 } from './cloudinary.types';
 import { ValidationError } from './cloudinary.errors';
 // #end-section
-
 // #function _normalizePublicIdPart - Normaliza un segmento de publicId
 /**
  * Normaliza un segmento de publicId (lowercase, sin espacios, sin caracteres inválidos).
@@ -25,7 +24,6 @@ export const _normalizePublicIdPart = (value: string): string =>
 		.replace(/-+/g, '-')
 		.replace(/^[-_]+|[-_]+$/g, '');
 // #end-function
-
 // #function _normalizeFolder - Normaliza el nombre de carpeta
 /**
  * Normaliza el nombre de carpeta removiendo slashes innecesarios.
@@ -43,7 +41,6 @@ export const _normalizeFolder = (folder: string): string =>
 		.filter(Boolean)
 		.join('/');
 // #end-function
-
 // #function _toContextMetadata - Convierte metadata a context válido
 /**
  * Convierte metadata a un objeto de strings compatible con Cloudinary.
@@ -60,7 +57,6 @@ export const _toContextMetadata = (
 	return entries.length ? Object.fromEntries(entries) : undefined;
 };
 // #end-function
-
 // #function _isPlainObject - Valida si es objeto plano
 /**
  * Valida si el valor es un objeto plano.
@@ -75,7 +71,6 @@ export const _isPlainObject = (value: unknown): boolean => {
 	return proto === Object.prototype || proto === null;
 };
 // #end-function
-
 // #function _hasNonSerializableValue - Detecta valores no serializables
 /**
  * Detecta valores no serializables dentro de un objeto.
@@ -107,7 +102,6 @@ export const _hasNonSerializableValue = (value: unknown): boolean => {
 	return false;
 };
 // #end-function
-
 // #function _buildPublicId - Construye publicId desde folder/prefix/name
 /**
  * Construye publicId normalizado para Cloudinary.
@@ -137,7 +131,6 @@ export const _buildPublicId = (
 	return { folder: normalizedFolder, publicId };
 };
 // #end-function
-
 // #function _validatePublicId - Valida formato de publicId
 /**
  * Valida formato del publicId para eliminar recursos.
@@ -163,7 +156,78 @@ export const _validatePublicId = (publicId: string): void => {
 	}
 };
 // #end-function
+// #function _validateNameSegment - Valida nombre sin slashes
+/**
+ * Valida un segmento de nombre (sin slashes).
+ * @param value Nombre a validar
+ * @param label Etiqueta para el mensaje de error
+ * @throws ValidationError si el formato es inválido
+ * @version 1.0.0
+ */
+export const _validateNameSegment = (value: string, label = 'nombre'): void => {
+	if (!value || !value.trim()) {
+		throw new ValidationError(`El ${label} es requerido.`);
+	}
 
+	if (value.includes('/')) {
+		throw new ValidationError(`El ${label} no puede contener '/'.`);
+	}
+
+	if (!/^[a-z0-9_-]+$/.test(value)) {
+		throw new ValidationError(`El ${label} tiene un formato inválido.`);
+	}
+
+	if (value.includes('..')) {
+		throw new ValidationError(`El ${label} tiene un formato inválido.`);
+	}
+};
+// #end-function
+// #function _validateFolderPath - Valida ruta de carpeta
+/**
+ * Valida el formato de una carpeta sin normalizarla.
+ * @param folder Carpeta a validar
+ * @throws ValidationError si el formato es inválido
+ * @version 1.0.0
+ */
+export const _validateFolderPath = (folder: string): void => {
+	if (!folder || !folder.trim()) {
+		throw new ValidationError('La carpeta destino es requerida.');
+	}
+
+	if (!/^[a-z0-9/_-]+$/.test(folder)) {
+		throw new ValidationError('La carpeta destino tiene un formato inválido.');
+	}
+
+	if (folder.includes('//') || folder.startsWith('/') || folder.endsWith('/')) {
+		throw new ValidationError('La carpeta destino tiene un formato inválido.');
+	}
+
+	if (folder.includes('..')) {
+		throw new ValidationError('La carpeta destino tiene un formato inválido.');
+	}
+};
+// #end-function
+// #function _splitPublicId - Separa folder y nombre
+/**
+ * Separa un publicId en folder y nombre.
+ * @param publicId Public ID completo
+ * @returns folder y name
+ * @version 1.0.0
+ */
+export const _splitPublicId = (
+	publicId: string
+): { folder: string; name: string } => {
+	const index = publicId.lastIndexOf('/');
+	if (index === -1) {
+		return { folder: '', name: publicId };
+	}
+
+	return {
+		folder: publicId.slice(0, index),
+		name: publicId.slice(index + 1),
+	};
+};
+// #end-function
 // #function _normalizeCreateImageResponse - Normaliza la respuesta raw del SDK
 /**
  * Normaliza la respuesta raw de Cloudinary a CreateImageResponse.
@@ -191,7 +255,6 @@ export const _normalizeCreateImageResponse = (
 	};
 };
 // #end-function
-
 // #function _normalizeReplaceImageResponse - Normaliza respuesta de replaceImage
 /**
  * Normaliza la respuesta raw de Cloudinary para replaceImage.
@@ -210,6 +273,213 @@ export const _normalizeReplaceImageResponse = (
 		secureUrl: rawRecord.secure_url || rawRecord.url,
 		metadata,
 		raw,
+	};
+};
+// #end-function
+// #function _normalizeListImageResult - Normaliza un recurso de listado
+/**
+ * Normaliza un recurso raw de Cloudinary a GetImageResult.
+ * Filtra recursos incompletos (campos obligatorios faltantes).
+ * @param raw Recurso raw del SDK
+ * @returns GetImageResult normalizado o null si está incompleto
+ * @version 1.0.0
+ */
+export const _normalizeListImageResult = (
+	raw: Record<string, any>
+): { publicId: string; url: string; secureUrl: string; width: number; height: number; format: string; bytes: number; metadata: Record<string, any>; raw: Record<string, any> } | null => {
+	// Validar campos obligatorios
+	if (!raw.public_id) return null;
+	if (!raw.secure_url && !raw.url) return null;
+	if (typeof raw.width !== 'number') return null;
+	if (typeof raw.height !== 'number') return null;
+
+	// Extraer metadata de context.custom
+	const rawMetadata = raw?.context?.custom as Record<string, any> | undefined;
+
+	return {
+		publicId: raw.public_id,
+		url: raw.url || raw.secure_url,
+		secureUrl: raw.secure_url || raw.url,
+		width: raw.width,
+		height: raw.height,
+		format: raw.format || '',
+		bytes: raw.bytes || 0,
+		metadata: rawMetadata || {},
+		raw: raw,
+	};
+};
+// #end-function
+// #function _validateImageSource - Valida fuente de imagen
+/**
+ * Valida una fuente de imagen (url, file o buffer).
+ * @param source Fuente de imagen a validar
+ * @throws ValidationError si la fuente es inválida
+ * @version 1.0.0
+ */
+export const _validateImageSource = (source: any): void => {
+	if (!source) {
+		throw new ValidationError('El source es requerido.');
+	}
+
+	if (!['url', 'file', 'buffer'].includes(source.type)) {
+		throw new ValidationError('Tipo de fuente de imagen no soportado.');
+	}
+
+	if (source.type === 'url' && !source.url?.trim()) {
+		throw new ValidationError('La URL de la imagen no es válida.');
+	}
+
+	if (source.type === 'file') {
+		if (!source.filePath?.trim()) {
+			throw new ValidationError('La ruta del archivo no es válida.');
+		}
+
+		// Importar fs aquí para evitar dependencia circular
+		const fs = require('fs');
+		if (!fs.existsSync(source.filePath)) {
+			throw new ValidationError(`No se encontró el archivo: ${source.filePath}`);
+		}
+	}
+
+	if (source.type === 'buffer' && !Buffer.isBuffer(source.buffer)) {
+		throw new ValidationError('El buffer de la imagen no es válido.');
+	}
+};
+// #end-function
+// #function _handleCloudinaryRenameError - Maneja errores de rename/move
+/**
+ * Mapea errores de Cloudinary rename a errores específicos del módulo.
+ * @param error Error capturado
+ * @param ErrorClass Clase de error a usar (RenameImageError o MoveImageError)
+ * @param publicId PublicId original
+ * @param targetPublicId PublicId destino
+ * @throws NotFoundError si 404
+ * @throws ErrorClass con mensaje apropiado
+ * @version 1.0.0
+ */
+export const _handleCloudinaryRenameError = (
+	error: any,
+	ErrorClass: any,
+	publicId: string,
+	targetPublicId: string
+): never => {
+	// Importar dinámicamente para evitar dependencia circular
+	const { NotFoundError } = require('./cloudinary.errors');
+
+	if (error?.error?.http_code === 404) {
+		throw new NotFoundError(publicId);
+	}
+
+	const message = error?.message || `Error al ${ErrorClass.name.includes('Rename') ? 'renombrar' : 'mover'} la imagen en Cloudinary.`;
+	const errorMessage = error?.error?.message || error?.message || '';
+	
+	if (error?.error?.http_code === 409 || /already exists|already_exists/i.test(errorMessage)) {
+		throw new ErrorClass('El publicId destino ya existe.', {
+			publicId,
+			targetPublicId,
+		}, error);
+	}
+	
+	throw new ErrorClass(message, { publicId, targetPublicId }, error);
+};
+// #end-function
+// #function _handleCloudinaryFetchError - Maneja errores de fetch/list
+/**
+ * Mapea errores HTTP de Cloudinary a FetchImageError con mensajes específicos.
+ * @param error Error capturado
+ * @param context Contexto adicional (publicId, folder, etc)
+ * @throws FetchImageError con mensaje apropiado
+ * @version 1.0.0
+ */
+export const _handleCloudinaryFetchError = (
+	error: any,
+	context: Record<string, any>
+): never => {
+	// Importar dinámicamente para evitar dependencia circular
+	const { FetchImageError, ValidationError, ConfigurationError, NotFoundError } = require('./cloudinary.errors');
+
+	// Re-lanzar errores que ya son de nuestro módulo
+	if (error instanceof ValidationError || error instanceof ConfigurationError || error instanceof NotFoundError) {
+		throw error;
+	}
+
+	if (error?.code === 'ETIMEDOUT' || error?.code === 'ECONNREFUSED') {
+		throw new FetchImageError('Error de red al obtener imagen.', context, error);
+	}
+
+	if (error?.error?.http_code === 401 || error?.error?.http_code === 403) {
+		throw new FetchImageError('Error de autenticación al obtener imagen.', context, error);
+	}
+
+	if (error?.error?.http_code && error.error.http_code >= 500) {
+		throw new FetchImageError('Error del servicio Cloudinary.', context, error);
+	}
+
+	throw new FetchImageError(
+		error?.message || 'Error al obtener la imagen en Cloudinary.',
+		context,
+		error
+	);
+};
+// #end-function
+// #function _normalizeGetImageResult - Normaliza resultado de getImage desde api.resource
+/**
+ * Normaliza la respuesta de api.resource a GetImageResult.
+ * @param result Respuesta raw de api.resource
+ * @param publicId PublicId consultado
+ * @returns GetImageResult normalizado
+ * @throws FetchImageError si la respuesta es inválida
+ * @version 1.0.0
+ */
+export const _normalizeGetImageResult = (
+	result: any,
+	publicId: string
+): { publicId: string; url: string; secureUrl: string; width: number; height: number; format: string; bytes: number; metadata: Record<string, any>; raw: any } => {
+	// Importar dinámicamente para evitar dependencia circular
+	const { FetchImageError, NotFoundError } = require('./cloudinary.errors');
+
+	if (result?.result === 'not found') {
+		throw new NotFoundError(publicId);
+	}
+
+	if (!result || !result.public_id) {
+		throw new FetchImageError('Respuesta inválida de Cloudinary.', { publicId }, result);
+	}
+
+	if (result?.resource_type && result.resource_type !== 'image') {
+		throw new FetchImageError('El recurso no es una imagen.', {
+			publicId,
+			resourceType: result.resource_type,
+		});
+	}
+
+	if (
+		result?.secure_url == null ||
+		result?.width == null ||
+		result?.height == null
+	) {
+		throw new FetchImageError(
+			'Respuesta incompleta de Cloudinary.',
+			{ publicId },
+			result
+		);
+	}
+
+	const customContext = _isPlainObject(result?.context?.custom)
+		? result.context.custom
+		: {};
+	const metadata = { ...customContext };
+
+	return {
+		publicId: result.public_id,
+		url: result.url || '',
+		secureUrl: result.secure_url || result.url || '',
+		width: result.width ?? 0,
+		height: result.height ?? 0,
+		format: result.format,
+		bytes: result.bytes ?? 0,
+		metadata,
+		raw: result,
 	};
 };
 // #end-function

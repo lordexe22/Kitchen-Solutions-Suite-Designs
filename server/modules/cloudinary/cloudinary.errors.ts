@@ -108,6 +108,40 @@ export class FetchImageError extends CloudinaryError {
 }
 // #end-class
 
+// #class RenameImageError
+/**
+ * Error específico durante renameImage.
+ * @version 1.0.0
+ */
+export class RenameImageError extends CloudinaryError {
+	constructor(
+		message: string,
+		metadata?: Record<string, unknown>,
+		originalError?: Error
+	) {
+		super(message, 'RENAME_IMAGE_ERROR', metadata, originalError);
+		this.name = 'RenameImageError';
+	}
+}
+// #end-class
+
+// #class MoveImageError
+/**
+ * Error específico durante moveImage.
+ * @version 1.0.0
+ */
+export class MoveImageError extends CloudinaryError {
+	constructor(
+		message: string,
+		metadata?: Record<string, unknown>,
+		originalError?: Error
+	) {
+		super(message, 'MOVE_IMAGE_ERROR', metadata, originalError);
+		this.name = 'MoveImageError';
+	}
+}
+// #end-class
+
 // #class DeleteError
 /**
  * Error durante la eliminación en Cloudinary.

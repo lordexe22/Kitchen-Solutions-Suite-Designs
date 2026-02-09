@@ -1,0 +1,185 @@
+@startuml cloudinary-contracts
+
+title Cloudinary Module - Contracts
+note right
+  **Audiencia**: Contract testing, refactors, onboarding
+  **Objetivo**: Hacer explícitos los contratos semánticos
+  **Actualizado**: 2026-02-06
+end note
+
+package "Function Contracts" {
+  component "createImage" as createImage_contract
+  component "renameImage" as renameImage_contract
+  component "moveImage" as moveImage_contract
+  component "changeImagePrefix" as changeImagePrefix_contract
+  component "getImage" as getImage_contract
+  component "listImages" as listImages_contract
+  component "replaceImage" as replaceImage_contract
+  component "deleteImage" as deleteImage_contract
+}
+
+note right of createImage_contract
+  **Precondiciones**:
+  - name no vacío
+  - folder no vacío
+  - ImageSource válido (url | file | buffer)
+  - metadata serializable
+  
+  **Postcondiciones**:
+  - publicId = folder/[prefix-]name
+  - metadata en context.custom
+  - versión incluida si existe
+  
+  **Garantías**:
+  - overwrite=false → error si existe
+  - Retorna datos normalizados
+  
+  **Source of truth**: uploader.upload response
+end note
+
+note right of renameImage_contract
+  **Precondiciones**:
+  - publicId válido
+  - newName sin '/'
+  - newName formato [a-z0-9_-]+
+  
+  **Postcondiciones**:
+  - publicId = folder/newName
+  - metadata preservada
+  
+  **Garantías**:
+  - Error explícito si no existe (404)
+  - Error explícito si destino existe (409)
+  - Nunca pierde metadata
+  
+  **Source of truth**: api.resource(targetPublicId)
+end note
+
+note right of moveImage_contract
+  **Precondiciones**:
+  - publicId válido
+  - targetPublicId válido
+  - targetPublicId con carpeta destino
+  
+  **Postcondiciones**:
+  - publicId = targetPublicId
+  - metadata preservada
+  
+  **Garantías**:
+  - Error explícito si no existe (404)
+  - Error explícito si destino existe (409)
+  - Nunca pierde metadata
+  
+  **Source of truth**: api.resource(targetPublicId)
+end note
+
+note right of changeImagePrefix_contract
+  **Precondiciones**:
+  - publicId válido
+  - mode in [replace, append, prepend]
+  - prefix válido si mode != replace
+  - prefix formato [a-z0-9_-]+
+  
+  **Postcondiciones**:
+  - replace: baseName sin prefijo o con nuevo prefijo
+  - prepend: prefix al inicio si no existe
+  - append: prefix al final si no existe
+  
+  **Garantías**:
+  - Idempotente (no duplica prefijos)
+  - Delega en renameImage
+  - Si no hay cambio, llama getImage
+  
+  **Source of truth**: Cloudinary (vía renameImage)
+end note
+
+note right of getImage_contract
+  **Precondiciones**:
+  - publicId válido
+  
+  **Postcondiciones**:
+  - GetImageResult normalizado
+  - metadata de context.custom
+  
+  **Garantías**:
+  - Error explícito si no existe (404)
+  - Validación de resource_type = image
+  - Campos requeridos validados
+  
+  **Source of truth**: api.resource(publicId)
+end note
+
+note right of listImages_contract
+  **Precondiciones**:
+  - folder válido
+  - limit entre 1 y 100
+  
+  **Postcondiciones**:
+  - Array de GetImageResult
+  - nextCursor para paginación
+  
+  **Garantías**:
+  - 404 → array vacío (no error)
+  - Limit respetado después de filtros
+  - recursive=false filtra subdirectorios
+  - Recursos incompletos filtrados
+  - Solo resource_type=image
+  
+  **Source of truth**: api.resources(prefix)
+  **Nota**: Cloudinary puede retornar más, se trunca post-filtro
+end note
+
+note right of replaceImage_contract
+  **Precondiciones**:
+  - publicId existe
+  - ImageSource válido
+  - overwrite debe ser true
+  - metadata serializable
+  
+  **Postcondiciones**:
+  - publicId sin cambios
+  - metadata reemplazada o mergeada
+  - invalidate=true aplicado
+  
+  **Garantías**:
+  - Error explícito si no existe (404)
+  - metadata=undefined → preserva existente
+  - metadata={} → limpia metadata
+  - metadata={...} → merge con existente
+  
+  **Source of truth**: uploader.upload(overwrite=true)
+end note
+
+note right of deleteImage_contract
+  **Precondiciones**:
+  - publicId válido
+  
+  **Postcondiciones**:
+  - deleted: true
+  
+  **Garantías**:
+  - Error explícito si no existe (404)
+  - result='error' → DeleteError
+  
+  **Source of truth**: uploader.destroy
+end note
+
+note as ErrorHandling
+  **Error Handling Strategy**:
+  - ValidationError: Input inválido (antes de llamar SDK)
+  - NotFoundError: 404 de Cloudinary
+  - ConfigurationError: Cliente no configurado
+  - OperationError: Fallo en operación (network, auth, server)
+  - Errores específicos preservan context para debugging
+end note
+
+note as SourceOfTruth
+  **Source of Truth Rules**:
+  - Siempre usamos respuesta de Cloudinary
+  - Nunca calculamos publicId localmente sin validar
+  - api.resource para consultas (más completo)
+  - uploader para operaciones destructivas
+  - context.custom para metadata (no tags ni otros)
+end note
+
+@enduml

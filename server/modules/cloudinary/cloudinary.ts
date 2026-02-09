@@ -11,6 +11,12 @@ import type {
 	ReplaceImageParams,
 	ReplaceImageResponse,
 	GetImageResult,
+	RenameImageParams,
+	MoveImageParams,
+	ChangeImagePrefixParams,
+	ListImagesParams,
+	ListImagesResult,
+	DeleteImageResponse,
 } from './cloudinary.types';
 import { getCloudinaryClient } from './cloudinary.config';
 import {
@@ -21,6 +27,14 @@ import {
 	_isPlainObject,
 	_hasNonSerializableValue,
 	_normalizeReplaceImageResponse,
+	_splitPublicId,
+	_validateNameSegment,
+	_validateFolderPath,
+	_normalizeListImageResult,
+	_validateImageSource,
+	_handleCloudinaryRenameError,
+	_handleCloudinaryFetchError,
+	_normalizeGetImageResult,
 } from './cloudinary.utils';
 import {
 	UploadError,
@@ -29,9 +43,11 @@ import {
 	NotFoundError,
 	ReplaceImageError,
 	FetchImageError,
+	RenameImageError,
+	MoveImageError,
 } from './cloudinary.errors';
-import type { DeleteImageResponse } from './cloudinary.types';
 // #end-section
+
 // #function createImage - Sube una imagen a Cloudinary y retorna datos normalizados
 /**
  * Sube una imagen a Cloudinary y retorna la respuesta normalizada.
@@ -49,9 +65,7 @@ export const createImage = async (
 	metadata?: ImageMetadata
 ): Promise<CreateImageResponse> => {
 	// #step 1 - Validar entrada principal
-	if (!image) {
-		throw new ValidationError('La imagen es requerida.');
-	}
+	_validateImageSource(image);
 
 	if (!options?.name?.trim()) {
 		throw new ValidationError('El nombre de la imagen es requerido.');
@@ -132,7 +146,6 @@ export const createImage = async (
 	// #end-step
 };
 // #end-function
-
 // #function deleteImage - Elimina una imagen por publicId
 /**
  * Elimina una imagen en Cloudinary por su publicId.
@@ -178,7 +191,6 @@ export const deleteImage = async (publicId: string): Promise<DeleteImageResponse
 	// #end-step
 };
 // #end-function
-
 // #function replaceImage - Reemplaza el binario de una imagen existente
 /**
  * Reemplaza el binario de una imagen existente sin cambiar su publicId.
@@ -198,32 +210,7 @@ export const replaceImage = async (
 
 	// #step 1 - Validar parámetros de entrada
 	_validatePublicId(publicId);
-
-	if (!source) {
-		throw new ValidationError('El source es requerido.');
-	}
-
-	if (!['url', 'file', 'buffer'].includes(source.type)) {
-		throw new ValidationError('Tipo de fuente de imagen no soportado.');
-	}
-
-	if (source.type === 'url' && !source.url?.trim()) {
-		throw new ValidationError('La URL de la imagen no es válida.');
-	}
-
-	if (source.type === 'file') {
-		if (!source.filePath?.trim()) {
-			throw new ValidationError('La ruta del archivo no es válida.');
-		}
-
-		if (!fs.existsSync(source.filePath)) {
-			throw new ValidationError(`No se encontró el archivo: ${source.filePath}`);
-		}
-	}
-
-	if (source.type === 'buffer' && !Buffer.isBuffer(source.buffer)) {
-		throw new ValidationError('El buffer de la imagen no es válido.');
-	}
+	_validateImageSource(source);
 
 	if (overwrite === false) {
 		throw new ValidationError('replaceImage requiere overwrite=true.');
@@ -320,7 +307,162 @@ export const replaceImage = async (
 	// #end-step
 };
 // #end-function
+// #function renameImage - Renombra una imagen sin reupload
+/**
+ * Renombra una imagen existente sin cambiar su contenido.
+ * @param params Parámetros con publicId y newName
+ * @returns GetImageResult normalizado
+ * @throws ValidationError si la entrada no es válida
+ * @throws NotFoundError si el recurso no existe
+ * @throws RenameImageError si falla el renombre
+ * @version 1.0.0
+ */
+export const renameImage = async (
+	params: RenameImageParams
+): Promise<GetImageResult> => {
+	const { publicId, newName } = params;
 
+	// #step 1 - Validar parámetros
+	_validatePublicId(publicId);
+	_validateNameSegment(newName, 'newName');
+	// #end-step
+
+	// #step 2 - Construir nuevo publicId
+	const { folder, name } = _splitPublicId(publicId);
+	if (newName === name) {
+		throw new ValidationError('El nuevo nombre debe ser distinto al actual.');
+	}
+	const targetPublicId = folder ? `${folder}/${newName}` : newName;
+	_validatePublicId(targetPublicId);
+	// #end-step
+
+	// #step 3 - Ejecutar rename
+	const cloudinary = getCloudinaryClient();
+	try {
+		await cloudinary.uploader.rename(publicId, targetPublicId, {
+			resource_type: 'image',
+			overwrite: false,
+		});
+	} catch (error: any) {
+		_handleCloudinaryRenameError(error, RenameImageError, publicId, targetPublicId);
+	}
+	// #end-step
+
+	// #step 4 - Obtener datos normalizados
+	return getImage(targetPublicId);
+	// #end-step
+};
+// #end-function
+// #function moveImage - Mueve una imagen a otra carpeta
+/**
+ * Mueve una imagen existente a otra carpeta sin reupload.
+ * @param params Parámetros con publicId y targetFolder
+ * @returns GetImageResult normalizado
+ * @throws ValidationError si la entrada no es válida
+ * @throws NotFoundError si el recurso no existe
+ * @throws MoveImageError si falla el move
+ * @version 1.0.0
+ */
+export const moveImage = async (
+	params: MoveImageParams
+): Promise<GetImageResult> => {
+	const { publicId, targetFolder } = params;
+
+	// #step 1 - Validar parámetros
+	_validatePublicId(publicId);
+	_validateFolderPath(targetFolder);
+	// #end-step
+
+	// #step 2 - Construir nuevo publicId
+	const { folder, name } = _splitPublicId(publicId);
+	if (folder === targetFolder) {
+		throw new ValidationError('La carpeta destino debe ser distinta a la actual.');
+	}
+	const targetPublicId = `${targetFolder}/${name}`;
+	_validatePublicId(targetPublicId);
+	// #end-step
+
+	// #step 3 - Ejecutar rename
+	const cloudinary = getCloudinaryClient();
+	try {
+		await cloudinary.uploader.rename(publicId, targetPublicId, {
+			resource_type: 'image',
+			overwrite: false,
+		});
+	} catch (error: any) {
+		_handleCloudinaryRenameError(error, MoveImageError, publicId, targetPublicId);
+	}
+	// #end-step
+
+	// #step 4 - Obtener datos normalizados
+	return getImage(targetPublicId);
+	// #end-step
+};
+// #end-function
+// #function changeImagePrefix - Cambia el prefijo de una imagen
+/**
+ * Cambia el prefijo del nombre y delega en renameImage.
+ * @param params Parámetros de cambio de prefijo
+ * @returns GetImageResult normalizado
+ * @throws ValidationError si la entrada no es válida
+ * @version 1.0.0
+ */
+export const changeImagePrefix = async (
+	params: ChangeImagePrefixParams
+): Promise<GetImageResult> => {
+	const { publicId, prefix, mode } = params;
+
+	// #step 1 - Validar parámetros
+	_validatePublicId(publicId);
+	if (!mode || !['replace', 'append', 'prepend'].includes(mode)) {
+		throw new ValidationError('El mode es requerido y debe ser válido.');
+	}
+
+	if (prefix !== undefined) {
+		_validateNameSegment(prefix, 'prefix');
+	}
+
+	if ((mode === 'append' || mode === 'prepend') && !prefix) {
+		throw new ValidationError('El prefix es requerido para append/prepend.');
+	}
+	// #end-step
+
+	// #step 2 - Calcular nuevo nombre
+	const { name } = _splitPublicId(publicId);
+	const separator = '-';
+	const parts = name.split(separator);
+	const existingPrefix = parts.length > 1 ? parts[0] : '';
+	const baseName = existingPrefix ? parts.slice(1).join(separator) : name;
+
+	let newName = name;
+	if (mode === 'replace') {
+		if (!prefix) {
+			newName = baseName;
+		} else if (existingPrefix === prefix) {
+			newName = name;
+		} else {
+			newName = `${prefix}-${baseName}`;
+		}
+	}
+
+	if (mode === 'prepend' && prefix) {
+		newName = name.startsWith(`${prefix}-`) ? name : `${prefix}-${name}`;
+	}
+
+	if (mode === 'append' && prefix) {
+		newName = name.endsWith(`-${prefix}`) ? name : `${name}-${prefix}`;
+	}
+	// #end-step
+
+	// #step 3 - Delegar en renameImage
+	if (newName === name) {
+		return getImage(publicId);
+	}
+
+	return renameImage({ publicId, newName });
+	// #end-step
+};
+// #end-function
 // #function getImage - Obtiene una imagen por publicId
 /**
  * Obtiene una imagen desde Cloudinary.
@@ -345,51 +487,9 @@ export const getImage = async (publicId: string): Promise<GetImageResult> => {
 			context: true,
 		});
 
-		if (result?.result === 'not found') {
-			throw new NotFoundError(publicId);
-		}
-
-		if (!result || !result.public_id) {
-			throw new FetchImageError('Respuesta inválida de Cloudinary.', { publicId }, result);
-		}
-
-		if (result?.resource_type && result.resource_type !== 'image') {
-			throw new FetchImageError('El recurso no es una imagen.', {
-				publicId,
-				resourceType: result.resource_type,
-			});
-		}
-
-		if (
-			result?.secure_url == null ||
-			result?.width == null ||
-			result?.height == null
-		) {
-			throw new FetchImageError(
-				'Respuesta incompleta de Cloudinary.',
-				{ publicId },
-				result
-			);
-		}
-
-		const customContext = _isPlainObject(result?.context?.custom)
-			? result.context.custom
-			: {};
-		const metadata = { ...customContext };
-
-		return {
-			publicId: result.public_id,
-			url: result.url || '',
-			secureUrl: result.secure_url || result.url || '',
-			width: result.width ?? 0,
-			height: result.height ?? 0,
-			format: result.format,
-			bytes: result.bytes ?? 0,
-			metadata,
-			raw: result,
-		};
+		return _normalizeGetImageResult(result, publicId);
 	} catch (error: any) {
-		if (error instanceof NotFoundError || error instanceof ValidationError) {
+		if (error instanceof NotFoundError || error instanceof ValidationError || error instanceof FetchImageError) {
 			throw error;
 		}
 
@@ -397,24 +497,98 @@ export const getImage = async (publicId: string): Promise<GetImageResult> => {
 			throw new NotFoundError(publicId);
 		}
 
-		if (error?.code === 'ETIMEDOUT' || error?.code === 'ECONNREFUSED') {
-			throw new FetchImageError('Error de red al obtener imagen.', { publicId }, error);
-		}
-
-		if (error?.error?.http_code === 401 || error?.error?.http_code === 403) {
-			throw new FetchImageError('Error de autenticación al obtener imagen.', { publicId }, error);
-		}
-
-		if (error?.error?.http_code && error.error.http_code >= 500) {
-			throw new FetchImageError('Error del servicio Cloudinary.', { publicId }, error);
-		}
-
-		throw new FetchImageError(
-			error?.message || 'Error al obtener la imagen en Cloudinary.',
-			{ publicId },
-			error
-		);
+		throw _handleCloudinaryFetchError(error, { publicId });
 	}
 	// #end-step
+};
+// #end-function
+// #function listImages - Lista imágenes en una carpeta
+/**
+ * Lista imágenes en una carpeta de Cloudinary con paginación.
+ * @param params Parámetros de listado (folder, recursive, limit, cursor)
+ * @returns ListImagesResult con items normalizados y nextCursor
+ * @throws ValidationError si el folder es inválido
+ * @throws FetchImageError si falla la consulta a Cloudinary
+ * @version 1.0.0
+ */
+export const listImages = async (params: ListImagesParams): Promise<ListImagesResult> => {
+	// Validar folder
+	_validateFolderPath(params.folder);
+
+	// Validar limit
+	const limit = params.limit ?? 20;
+	if (limit < 1 || limit > 100) {
+		throw new ValidationError('El límite debe estar entre 1 y 100.');
+	}
+
+	try {
+		const client = getCloudinaryClient();
+
+		// Construir prefix con '/' al final
+		const prefix = `${params.folder}/`;
+
+		// Construir opciones para api.resources
+		const options: Record<string, any> = {
+			type: 'upload',
+			resource_type: 'image',
+			prefix,
+			max_results: limit,
+			context: true,
+		};
+
+		// Agregar cursor si existe
+		if (params.cursor) {
+			options.next_cursor = params.cursor;
+		}
+
+		// Llamar a api.resources
+		const response = await client.api.resources(options);
+
+		// Normalizar recursos
+		const items: GetImageResult[] = [];
+		const resources = (response.resources || []) as Record<string, any>[];
+
+		for (const raw of resources) {
+			// Filtrar por resource_type si Cloudinary no lo hizo
+			if (raw.resource_type !== 'image') continue;
+
+			// Si no es recursive, filtrar subdirectorios
+			if (!params.recursive) {
+				const publicId = raw.public_id as string;
+				if (!publicId) continue; // Saltar si no tiene publicId
+				// Contar slashes después del prefix
+				const afterPrefix = publicId.slice(prefix.length);
+				if (afterPrefix.includes('/')) continue; // Está en subdirectorio
+			}
+
+			// Normalizar recurso
+			const normalized = _normalizeListImageResult(raw);
+			if (normalized) {
+				items.push(normalized);
+			}
+		}
+
+		// Asegurar que respetamos el límite después de filtrar
+		const finalItems = items.slice(0, limit);
+
+		// Extraer nextCursor
+		const nextCursor = response.next_cursor ? String(response.next_cursor) : undefined;
+
+		return {
+			items: finalItems,
+			nextCursor,
+		};
+	} catch (error: any) {
+		// Mapear errores de Cloudinary
+		if (error?.error?.http_code === 404) {
+			// Folder vacío no es error, devolver items vacíos
+			return {
+				items: [],
+				nextCursor: undefined,
+			};
+		}
+
+		throw _handleCloudinaryFetchError(error, { folder: params.folder });
+	}
 };
 // #end-function

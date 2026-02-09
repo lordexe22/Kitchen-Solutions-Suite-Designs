@@ -465,19 +465,26 @@ describe('Cloudinary - getImage', () => {
 				{ source: 'twice', module: 'cloudinary' }
 			);
 
-			const resultA = await getImage(created.publicId);
-			const resultB = await getImage(created.publicId);
+		const resultA = await getImage(created.publicId);
+		const resultB = await getImage(created.publicId);
 
-			expect(resultA).toEqual(resultB);
-		}, 30000);
-		// #end-test
+		// Excluir rate_limit_remaining del raw porque cambia entre llamadas
+		const { raw: rawA, ...restA } = resultA;
+		const { raw: rawB, ...restB } = resultB;
+		const { rate_limit_remaining: _a, ...rawAWithoutRate } = rawA;
+		const { rate_limit_remaining: _b, ...rawBWithoutRate } = rawB;
 
-		// #test - coherencia create -> get
-		/**
-		 * createImage seguido de getImage retorna mismo publicId y metadata.
-		 * @version 1.0.0
-		 */
-		test('create -> get mantiene publicId y metadata', async () => {
+		expect(restA).toEqual(restB);
+		expect(rawAWithoutRate).toEqual(rawBWithoutRate);
+	}, 30000);
+	// #end-test
+
+	// #test - coherencia create -> get
+	/**
+	 * createImage seguido de getImage retorna mismo publicId y metadata.
+	 * @version 1.0.0
+	 */
+	test('create -> get mantiene publicId y metadata', async () => {
 			const created = await createImage(
 				{
 					type: 'url',
