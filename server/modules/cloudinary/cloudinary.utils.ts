@@ -13,6 +13,7 @@ import { ValidationError } from './cloudinary.errors';
  * Normaliza un segmento de publicId (lowercase, sin espacios, sin caracteres inválidos).
  * @param value Segmento original
  * @returns Segmento normalizado
+ * @internal
  * @version 1.0.0
  */
 export const _normalizePublicIdPart = (value: string): string =>
@@ -29,6 +30,7 @@ export const _normalizePublicIdPart = (value: string): string =>
  * Normaliza el nombre de carpeta removiendo slashes innecesarios.
  * @param folder Carpeta original
  * @returns Carpeta normalizada
+ * @internal
  * @version 1.0.0
  */
 export const _normalizeFolder = (folder: string): string =>
@@ -46,6 +48,7 @@ export const _normalizeFolder = (folder: string): string =>
  * Convierte metadata a un objeto de strings compatible con Cloudinary.
  * @param metadata Metadata custom
  * @returns Context metadata listo para Cloudinary
+ * @internal
  * @version 1.0.0
  */
 export const _toContextMetadata = (
@@ -62,6 +65,7 @@ export const _toContextMetadata = (
  * Valida si el valor es un objeto plano.
  * @param value Valor a validar
  * @returns boolean
+ * @internal
  * @version 1.0.0
  */
 export const _isPlainObject = (value: unknown): boolean => {
@@ -76,6 +80,7 @@ export const _isPlainObject = (value: unknown): boolean => {
  * Detecta valores no serializables dentro de un objeto.
  * @param value Valor a inspeccionar
  * @returns boolean
+ * @internal
  * @version 1.0.0
  */
 export const _hasNonSerializableValue = (value: unknown): boolean => {
@@ -110,6 +115,7 @@ export const _hasNonSerializableValue = (value: unknown): boolean => {
  * @param prefix Prefijo opcional
  * @returns Objeto con folder y publicId normalizados
  * @throws ValidationError si el resultado queda vacío
+ * @internal
  * @version 1.0.0
  */
 export const _buildPublicId = (
@@ -142,6 +148,7 @@ export const _buildPublicId = (
  * Construye publicId desde metadata almacenada (folder, name, prefix).
  * @param identity Identidad almacenada en metadata
  * @returns publicId
+ * @internal
  * @version 1.0.0
  */
 export const _buildPublicIdFromIdentity = (identity: {
@@ -163,6 +170,7 @@ export const _buildPublicIdFromIdentity = (identity: {
  * @param metadata Metadata custom
  * @param publicId PublicId del recurso
  * @throws ValidationError si falta metadata requerida
+ * @internal
  * @version 1.0.0
  */
 export const _getStoredIdentity = (
@@ -206,6 +214,7 @@ export const _getStoredIdentity = (
  * Valida formato del publicId para eliminar recursos.
  * @param publicId Public ID a validar
  * @throws ValidationError si el formato es inválido
+ * @internal
  * @version 1.0.0
  */
 export const _validatePublicId = (publicId: string): void => {
@@ -232,6 +241,7 @@ export const _validatePublicId = (publicId: string): void => {
  * @param value Nombre a validar
  * @param label Etiqueta para el mensaje de error
  * @throws ValidationError si el formato es inválido
+ * @internal
  * @version 1.0.0
  */
 export const _validateNameSegment = (value: string, label = 'nombre'): void => {
@@ -257,6 +267,7 @@ export const _validateNameSegment = (value: string, label = 'nombre'): void => {
  * Valida el formato de una carpeta sin normalizarla.
  * @param folder Carpeta a validar
  * @throws ValidationError si el formato es inválido
+ * @internal
  * @version 1.0.0
  */
 export const _validateFolderPath = (folder: string): void => {
@@ -282,6 +293,7 @@ export const _validateFolderPath = (folder: string): void => {
  * Separa un publicId en folder y nombre.
  * @param publicId Public ID completo
  * @returns folder y name
+ * @internal
  * @version 1.0.0
  */
 export const _splitPublicId = (
@@ -304,6 +316,7 @@ export const _splitPublicId = (
  * @param raw Respuesta raw del SDK
  * @param fallbackMetadata Metadata enviada en el upload
  * @returns CreateImageResponse normalizado
+ * @internal
  * @version 1.0.0
  */
 export const _normalizeCreateImageResponse = (
@@ -331,6 +344,7 @@ export const _normalizeCreateImageResponse = (
  * @param raw Respuesta raw del SDK
  * @param metadata Metadata enviada en el replace
  * @returns ReplaceImageResponse normalizado
+ * @internal
  * @version 1.0.0
  */
 export const _normalizeReplaceImageResponse = (
@@ -352,6 +366,7 @@ export const _normalizeReplaceImageResponse = (
  * Filtra recursos incompletos (campos obligatorios faltantes).
  * @param raw Recurso raw del SDK
  * @returns GetImageResult normalizado o null si está incompleto
+ * @internal
  * @version 1.0.0
  */
 export const _normalizeListImageResult = (
@@ -384,6 +399,7 @@ export const _normalizeListImageResult = (
  * Valida una fuente de imagen (url, file o buffer).
  * @param source Fuente de imagen a validar
  * @throws ValidationError si la fuente es inválida
+ * @internal
  * @version 1.0.0
  */
 export const _validateImageSource = (source: any): void => {
@@ -425,6 +441,7 @@ export const _validateImageSource = (source: any): void => {
  * @param targetPublicId PublicId destino
  * @throws NotFoundError si 404
  * @throws ErrorClass con mensaje apropiado
+ * @internal
  * @version 1.0.0
  */
 export const _handleCloudinaryRenameError = (
@@ -459,6 +476,7 @@ export const _handleCloudinaryRenameError = (
  * @param error Error capturado
  * @param context Contexto adicional (publicId, folder, etc)
  * @throws FetchImageError con mensaje apropiado
+ * @internal
  * @version 1.0.0
  */
 export const _handleCloudinaryFetchError = (
@@ -499,6 +517,7 @@ export const _handleCloudinaryFetchError = (
  * @param publicId PublicId consultado
  * @returns GetImageResult normalizado
  * @throws FetchImageError si la respuesta es inválida
+ * @internal
  * @version 1.0.0
  */
 export const _normalizeGetImageResult = (

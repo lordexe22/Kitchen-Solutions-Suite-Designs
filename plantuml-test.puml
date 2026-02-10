@@ -1,0 +1,112 @@
+@startuml cloudinary-module
+skinparam classAttributeIconSize 0
+
+class CloudinaryModule {
+  +createImage(image: ImageSource, options: CreateImageOptions, metadata?: ImageMetadata): CreateImageResponse
+  +getImage(publicId: PublicId): GetImageResult
+  +listImages(params: ListImagesParams): ListImagesResult
+  +deleteImage(publicId: PublicId): DeleteImageResponse
+  +replaceImage(params: ReplaceImageParams): ReplaceImageResponse
+  +renameImage(params: RenameImageParams): GetImageResult
+  +moveImage(params: MoveImageParams): GetImageResult
+  +changeImagePrefix(params: ChangeImagePrefixParams): GetImageResult
+}
+
+class ImageSource {
+  type: 'url' | 'file' | 'buffer'
+}
+
+class CreateImageOptions {
+  name: string
+  folder: string
+  prefix?: string
+  overwrite?: boolean
+}
+
+class ImageMetadata {
+  [key: string]: string | number | boolean
+}
+
+class CreateImageResponse {
+  publicId: string
+  url: string
+  width: number
+  height: number
+  format: string
+  size: number
+}
+
+class GetImageResult {
+  publicId: string
+  url: string
+  secureUrl: string
+  width: number
+  height: number
+  format: string
+  bytes: number
+}
+
+class DeleteImageResponse {
+  deleted: boolean
+}
+
+class ReplaceImageParams {
+  publicId: string
+  source: ImageSource
+  metadata?: ImageMetadata
+  overwrite?: boolean
+}
+
+class ReplaceImageResponse {
+  publicId: string
+  secureUrl: string
+  metadata: ImageMetadata
+}
+
+class RenameImageParams {
+  publicId: string
+  newName: string
+}
+
+class MoveImageParams {
+  publicId: string
+  targetFolder: string
+}
+
+class ChangeImagePrefixParams {
+  publicId: string
+  prefix?: string
+  mode: 'replace' | 'append' | 'prepend'
+}
+
+class ListImagesParams {
+  folder: string
+  recursive?: boolean
+  limit?: number
+  cursor?: string
+}
+
+class ListImagesResult {
+  items: GetImageResult[]
+  nextCursor?: string
+}
+
+class PublicId {
+  value: string
+}
+
+CloudinaryModule --> ImageSource
+CloudinaryModule --> CreateImageOptions
+CloudinaryModule --> ImageMetadata
+CloudinaryModule --> CreateImageResponse
+CloudinaryModule --> GetImageResult
+CloudinaryModule --> DeleteImageResponse
+CloudinaryModule --> ReplaceImageParams
+CloudinaryModule --> ReplaceImageResponse
+CloudinaryModule --> RenameImageParams
+CloudinaryModule --> MoveImageParams
+CloudinaryModule --> ChangeImagePrefixParams
+CloudinaryModule --> ListImagesParams
+CloudinaryModule --> ListImagesResult
+
+@enduml
