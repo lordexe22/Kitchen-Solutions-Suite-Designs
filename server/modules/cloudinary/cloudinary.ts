@@ -1,13 +1,11 @@
 // cloudinary.ts
 /* #info - Core service functions for Cloudinary image creation */
 // #section Imports
-import fs from 'fs';
 import type {
 	ImageSource,
 	CreateImageOptions,
 	ImageMetadata,
 	CreateImageResponse,
-	ReplaceImageOptions,
 	ReplaceImageParams,
 	ReplaceImageResponse,
 	GetImageResult,
@@ -21,13 +19,14 @@ import type {
 import { getCloudinaryClient } from './cloudinary.config';
 import {
 	_buildPublicId,
+	_buildPublicIdFromIdentity,
+	_getStoredIdentity,
 	_toContextMetadata,
 	_normalizeCreateImageResponse,
 	_validatePublicId,
 	_isPlainObject,
 	_hasNonSerializableValue,
 	_normalizeReplaceImageResponse,
-	_splitPublicId,
 	_validateNameSegment,
 	_validateFolderPath,
 	_normalizeListImageResult,
@@ -78,18 +77,24 @@ export const createImage = async (
 	// #step 2 - Configurar cliente y parámetros del upload
 	const cloudinary = getCloudinaryClient();
 
-	const { folder, publicId } = _buildPublicId(
+	const { folder, publicId, name: normalizedName, prefix: normalizedPrefix } = _buildPublicId(
 		options.folder,
 		options.name,
 		options.prefix
 	);
+	const storedMetadata: ImageMetadata = {
+		...(metadata ?? {}),
+		name: normalizedName,
+		folder,
+		...(normalizedPrefix ? { prefix: normalizedPrefix } : {}),
+	};
 
 	const uploadParams: Record<string, unknown> = {
 		folder,
 		public_id: publicId,
 		overwrite: options.overwrite ?? false,
 		resource_type: 'image',
-		context: _toContextMetadata(metadata),
+		context: _toContextMetadata(storedMetadata),
 	};
 	// #end-step
 	// #step 3 - Resolver el tipo de fuente y ejecutar el upload
@@ -97,26 +102,10 @@ export const createImage = async (
 
 	try {
 		if (image.type === 'url') {
-			if (!image.url?.trim()) {
-				throw new ValidationError('La URL de la imagen no es válida.');
-			}
-
 			result = await cloudinary.uploader.upload(image.url, uploadParams);
 		} else if (image.type === 'file') {
-			if (!image.filePath?.trim()) {
-				throw new ValidationError('La ruta del archivo no es válida.');
-			}
-
-			if (!fs.existsSync(image.filePath)) {
-				throw new ValidationError(`No se encontró el archivo: ${image.filePath}`);
-			}
-
 			result = await cloudinary.uploader.upload(image.filePath, uploadParams);
 		} else if (image.type === 'buffer') {
-			if (!Buffer.isBuffer(image.buffer)) {
-				throw new ValidationError('El buffer de la imagen no es válido.');
-			}
-
 			const base64 = image.buffer.toString('base64');
 			const dataUri = `data:application/octet-stream;base64,${base64}`;
 			result = await cloudinary.uploader.upload(dataUri, uploadParams);
@@ -142,7 +131,7 @@ export const createImage = async (
 	// #end-step
 
 	// #step 5 - Normalizar la respuesta
-	return _normalizeCreateImageResponse(result, metadata);
+	return _normalizeCreateImageResponse(result, storedMetadata);
 	// #end-step
 };
 // #end-function
@@ -228,12 +217,14 @@ export const replaceImage = async (
 	// #step 2 - Verificar existencia del recurso
 	const cloudinary = getCloudinaryClient();
 	let existingMetadata: Record<string, any> = {};
+	let storedIdentity: { name: string; folder: string; prefix?: string } | null = null;
 	try {
 		const resource = await cloudinary.api.resource(publicId, {
 			resource_type: 'image',
 			context: true,
 		});
 		existingMetadata = resource?.context?.custom ?? {};
+		storedIdentity = _getStoredIdentity(existingMetadata, publicId);
 	} catch (error: any) {
 		if (error?.error?.http_code === 404) {
 			throw new NotFoundError(publicId);
@@ -245,10 +236,20 @@ export const replaceImage = async (
 	// #step 3 - Preparar parámetros de upload
 	const normalizedMetadata =
 		metadata === undefined
-			? {}
+			? { ...existingMetadata }
 			: Object.keys(metadata).length === 0
 				? {}
 				: { ...existingMetadata, ...metadata };
+
+	if (storedIdentity) {
+		normalizedMetadata.name = storedIdentity.name;
+		normalizedMetadata.folder = storedIdentity.folder;
+		if (storedIdentity.prefix) {
+			normalizedMetadata.prefix = storedIdentity.prefix;
+		} else {
+			delete normalizedMetadata.prefix;
+		}
+	}
 	const uploadParams: Record<string, unknown> = {
 		public_id: publicId,
 		overwrite: true,
@@ -263,26 +264,10 @@ export const replaceImage = async (
 
 	try {
 		if (source.type === 'url') {
-			if (!source.url?.trim()) {
-				throw new ValidationError('La URL de la imagen no es válida.');
-			}
-
 			result = await cloudinary.uploader.upload(source.url, uploadParams);
 		} else if (source.type === 'file') {
-			if (!source.filePath?.trim()) {
-				throw new ValidationError('La ruta del archivo no es válida.');
-			}
-
-			if (!fs.existsSync(source.filePath)) {
-				throw new ValidationError(`No se encontró el archivo: ${source.filePath}`);
-			}
-
 			result = await cloudinary.uploader.upload(source.filePath, uploadParams);
 		} else if (source.type === 'buffer') {
-			if (!Buffer.isBuffer(source.buffer)) {
-				throw new ValidationError('El buffer de la imagen no es válido.');
-			}
-
 			const base64 = source.buffer.toString('base64');
 			const dataUri = `data:application/octet-stream;base64,${base64}`;
 			result = await cloudinary.uploader.upload(dataUri, uploadParams);
@@ -328,11 +313,16 @@ export const renameImage = async (
 	// #end-step
 
 	// #step 2 - Construir nuevo publicId
-	const { folder, name } = _splitPublicId(publicId);
-	if (newName === name) {
+	const current = await getImage(publicId);
+	const identity = _getStoredIdentity(current.metadata, publicId);
+	if (newName === identity.name) {
 		throw new ValidationError('El nuevo nombre debe ser distinto al actual.');
 	}
-	const targetPublicId = folder ? `${folder}/${newName}` : newName;
+	const targetPublicId = _buildPublicIdFromIdentity({
+		folder: identity.folder,
+		name: newName,
+		prefix: identity.prefix,
+	});
 	_validatePublicId(targetPublicId);
 	// #end-step
 
@@ -348,7 +338,25 @@ export const renameImage = async (
 	}
 	// #end-step
 
-	// #step 4 - Obtener datos normalizados
+	// #step 4 - Actualizar metadata almacenada
+	try {
+		const updatedMetadata: ImageMetadata = {
+			...current.metadata,
+			name: newName,
+			folder: identity.folder,
+			...(identity.prefix ? { prefix: identity.prefix } : {}),
+		};
+		await cloudinary.api.update(targetPublicId, {
+			resource_type: 'image',
+			context: _toContextMetadata(updatedMetadata),
+		});
+	} catch (error: any) {
+		const message = error?.message || 'Error al actualizar metadata en Cloudinary.';
+		throw new RenameImageError(message, { publicId, targetPublicId }, error);
+	}
+	// #end-step
+
+	// #step 5 - Obtener datos normalizados
 	return getImage(targetPublicId);
 	// #end-step
 };
@@ -374,11 +382,16 @@ export const moveImage = async (
 	// #end-step
 
 	// #step 2 - Construir nuevo publicId
-	const { folder, name } = _splitPublicId(publicId);
-	if (folder === targetFolder) {
+	const current = await getImage(publicId);
+	const identity = _getStoredIdentity(current.metadata, publicId);
+	if (identity.folder === targetFolder) {
 		throw new ValidationError('La carpeta destino debe ser distinta a la actual.');
 	}
-	const targetPublicId = `${targetFolder}/${name}`;
+	const targetPublicId = _buildPublicIdFromIdentity({
+		folder: targetFolder,
+		name: identity.name,
+		prefix: identity.prefix,
+	});
 	_validatePublicId(targetPublicId);
 	// #end-step
 
@@ -394,7 +407,25 @@ export const moveImage = async (
 	}
 	// #end-step
 
-	// #step 4 - Obtener datos normalizados
+	// #step 4 - Actualizar metadata almacenada
+	try {
+		const updatedMetadata: ImageMetadata = {
+			...current.metadata,
+			name: identity.name,
+			folder: targetFolder,
+			...(identity.prefix ? { prefix: identity.prefix } : {}),
+		};
+		await cloudinary.api.update(targetPublicId, {
+			resource_type: 'image',
+			context: _toContextMetadata(updatedMetadata),
+		});
+	} catch (error: any) {
+		const message = error?.message || 'Error al actualizar metadata en Cloudinary.';
+		throw new MoveImageError(message, { publicId, targetPublicId }, error);
+	}
+	// #end-step
+
+	// #step 5 - Obtener datos normalizados
 	return getImage(targetPublicId);
 	// #end-step
 };
@@ -428,38 +459,82 @@ export const changeImagePrefix = async (
 	// #end-step
 
 	// #step 2 - Calcular nuevo nombre
-	const { name } = _splitPublicId(publicId);
-	const separator = '-';
-	const parts = name.split(separator);
-	const existingPrefix = parts.length > 1 ? parts[0] : '';
-	const baseName = existingPrefix ? parts.slice(1).join(separator) : name;
+	const current = await getImage(publicId);
+	const identity = _getStoredIdentity(current.metadata, publicId);
+	const separator = '--';
+	const existingPrefix = identity.prefix || '';
 
-	let newName = name;
+	let newPrefix = existingPrefix;
 	if (mode === 'replace') {
 		if (!prefix) {
-			newName = baseName;
+			newPrefix = '';
 		} else if (existingPrefix === prefix) {
-			newName = name;
+			newPrefix = existingPrefix;
 		} else {
-			newName = `${prefix}-${baseName}`;
+			newPrefix = prefix;
 		}
 	}
 
 	if (mode === 'prepend' && prefix) {
-		newName = name.startsWith(`${prefix}-`) ? name : `${prefix}-${name}`;
+		if (existingPrefix === prefix || existingPrefix.startsWith(`${prefix}${separator}`)) {
+			newPrefix = existingPrefix;
+		} else {
+			newPrefix = existingPrefix
+				? `${prefix}${separator}${existingPrefix}`
+				: prefix;
+		}
 	}
 
 	if (mode === 'append' && prefix) {
-		newName = name.endsWith(`-${prefix}`) ? name : `${name}-${prefix}`;
+		if (existingPrefix === prefix || existingPrefix.endsWith(`${separator}${prefix}`)) {
+			newPrefix = existingPrefix;
+		} else {
+			newPrefix = existingPrefix
+				? `${existingPrefix}${separator}${prefix}`
+				: prefix;
+		}
 	}
+
+	const targetPublicId = _buildPublicIdFromIdentity({
+		folder: identity.folder,
+		name: identity.name,
+		prefix: newPrefix || undefined,
+	});
+	_validatePublicId(targetPublicId);
 	// #end-step
 
 	// #step 3 - Delegar en renameImage
-	if (newName === name) {
+	if (targetPublicId === publicId) {
 		return getImage(publicId);
 	}
 
-	return renameImage({ publicId, newName });
+	const cloudinary = getCloudinaryClient();
+	try {
+		await cloudinary.uploader.rename(publicId, targetPublicId, {
+			resource_type: 'image',
+			overwrite: false,
+		});
+	} catch (error: any) {
+		_handleCloudinaryRenameError(error, RenameImageError, publicId, targetPublicId);
+	}
+
+	try {
+		const updatedMetadata: ImageMetadata = {
+			...current.metadata,
+			name: identity.name,
+			folder: identity.folder,
+			...(newPrefix ? { prefix: newPrefix } : {}),
+		};
+		await cloudinary.api.update(targetPublicId, {
+			resource_type: 'image',
+			context: _toContextMetadata(updatedMetadata),
+		});
+	} catch (error: any) {
+		const message = error?.message || 'Error al actualizar metadata en Cloudinary.';
+		throw new RenameImageError(message, { publicId, targetPublicId }, error);
+	}
+
+	return getImage(targetPublicId);
 	// #end-step
 };
 // #end-function

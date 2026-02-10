@@ -27,7 +27,10 @@ export interface CreateImageOptions {
  * Metadata custom (context) para Cloudinary.
  */
 export interface ImageMetadata {
-	[key: string]: string | number | boolean;
+	name?: string;
+	folder?: string;
+	prefix?: string;
+	[key: string]: string | number | boolean | undefined;
 }
 // #end-interface
 // #interface ReplaceImageOptions

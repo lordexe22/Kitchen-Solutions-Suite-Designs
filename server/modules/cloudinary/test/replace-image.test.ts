@@ -11,6 +11,7 @@ import {	ConfigurationError,
 import * as cloudinaryConfig from '../cloudinary.config';
 // #end-section
 
+
 // #section Tests
 describe('Cloudinary - replaceImage', () => {
 	// #test - validaciones de entrada
@@ -144,7 +145,9 @@ describe('Cloudinary - replaceImage', () => {
 			url: 'http://example.com/img.jpg',
 		});
 		const destroy = jest.fn();
-		const apiResource = jest.fn().mockResolvedValue({});
+		const apiResource = jest.fn().mockResolvedValue({
+			context: { custom: { name: 'my-public-id', folder: '' } },
+		});
 
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
@@ -212,7 +215,9 @@ describe('Cloudinary - replaceImage', () => {
 	 */
 	test('propaga UploadError y ReplaceImageError según fallo', async () => {
 		const upload = jest.fn().mockRejectedValue(new Error('Generic upload error'));
-		const apiResource = jest.fn().mockResolvedValue({});
+		const apiResource = jest.fn().mockResolvedValue({
+			context: { custom: { name: 'my-public-id', folder: '' } },
+		});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
 			.mockReturnValue({
@@ -283,7 +288,9 @@ describe('Cloudinary - replaceImage', () => {
 
 		expect(replaced.publicId).toBe(created.publicId);
 		expect(replaced.secureUrl).toBeTruthy();
-		expect(replaced.metadata).toEqual({ version: 'v2' });
+		expect(replaced.metadata).toEqual(
+			expect.objectContaining({ version: 'v2' })
+		);
 		expect(replaced.secureUrl).toContain(created.publicId);
 		expect((replaced.raw as Record<string, any> | undefined)?.version).toBeGreaterThanOrEqual(beforeVersion);
 
@@ -330,7 +337,9 @@ describe('Cloudinary - replaceImage', () => {
 		fs.unlinkSync(tmpPath);
 
 		expect(replaced.publicId).toBe(created.publicId);
-		expect(replaced.metadata).toEqual({ file: true });
+		expect(replaced.metadata).toEqual(
+			expect.objectContaining({ file: true })
+		);
 	}, 30000);
 	// #end-test
 
@@ -363,7 +372,9 @@ describe('Cloudinary - replaceImage', () => {
 		});
 
 		expect(replaced.publicId).toBe(created.publicId);
-		expect(replaced.metadata).toEqual({ buffer: true });
+		expect(replaced.metadata).toEqual(
+			expect.objectContaining({ buffer: true })
+		);
 	}, 30000);
 	// #end-test
 
@@ -392,7 +403,12 @@ describe('Cloudinary - replaceImage', () => {
 			metadata: {},
 		});
 
-		expect(replaced.metadata).toEqual({});
+		expect(replaced.metadata).toEqual(
+			expect.objectContaining({
+				name: created.publicId.split('/').pop(),
+				folder: 'kitchen-solutions-suite/design-tests',
+			})
+		);
 	}, 30000);
 	// #end-test
 
@@ -421,7 +437,9 @@ describe('Cloudinary - replaceImage', () => {
 			metadata: { foo: 'new' },
 		});
 
-		expect(replaced.metadata).toEqual({ foo: 'new', keep: 'yes' });
+		expect(replaced.metadata).toEqual(
+			expect.objectContaining({ foo: 'new', keep: 'yes' })
+		);
 	}, 30000);
 	// #end-test
 

@@ -8,11 +8,11 @@ Este módulo proporciona una interfaz robusta y tipada para todas las operacione
 
 ## Principios de Diseño
 
-- **Cloudinary como fuente de verdad**: Siempre se usa `api.resource` como respuesta autoritativa
-- **Validación exhaustiva**: Todos los inputs son validados antes de llamar a la API
+- **Fuente de verdad por operación**: `getImage`, `renameImage` y `moveImage` se validan contra `api.resource`
+- **Validación consistente**: Inputs críticos se validan antes de llamar a la API
 - **Errores tipados específicos**: Cada operación tiene clases de error dedicadas
 - **Normalización consistente**: Las respuestas se normalizan a interfaces predecibles
-- **Metadata siempre objeto**: Los metadatos custom siempre retornan `{}` por defecto
+- **Metadata consistente**: `getImage` y `listImages` siempre retornan `{}` si no hay metadata
 
 ## Arquitectura
 
@@ -24,8 +24,8 @@ cloudinary/
 ├── cloudinary.utils.ts        # Utilidades y helpers internos
 ├── cloudinary.errors.ts       # Clases de error específicas
 ├── docs/                      # Documentación
-│   └── cloudinary-module.puml # Diagrama PlantUML de funcionalidades
-└── test/                      # Test suite completo
+│   └── plantuml-test.puml      # Diagrama PlantUML (en progreso)
+└── test/                      # Tests del módulo
     ├── create-image.test.ts
     ├── delete-image.test.ts
     ├── replace-image.test.ts
@@ -52,8 +52,10 @@ Sube una imagen a Cloudinary desde múltiples fuentes.
 
 **Características:**
 - Genera `public_id` automáticamente con folder/prefix/name
+- Si hay prefix, se separa con `--`
+- Normaliza folder/name/prefix a minúsculas y elimina caracteres inválidos
 - Guarda metadata como context en Cloudinary
-- Valida que metadata sea serializable
+- Guarda `name`, `folder` y `prefix` en metadata
 - Soporta overwrite opcional
 
 ---
@@ -89,7 +91,10 @@ Reemplaza el contenido de una imagen existente manteniendo el mismo `public_id`.
 **Características:**
 - Mantiene mismo public_id
 - Actualiza metadata opcionalmente
-- Usa api.resource como fuente de verdad
+- Normaliza respuesta del upload
+- Si `metadata` no se envia, preserva la metadata existente del recurso
+- Si `metadata` es `{}`, limpia la metadata previa
+- Preserva `name`, `folder` y `prefix` en metadata
 
 ---
 
@@ -110,10 +115,6 @@ Renombra una imagen manteniendo la carpeta.
 - Retorna api.resource (no rename response)
 - Preserva metadata existente
 
-**Tests:** 9 tests incluyendo validaciones, source of truth, idempotencia negativa
-
----
-
 ### 5. moveImage
 Mueve una imagen a otra carpeta manteniendo el nombre.
 
@@ -131,10 +132,6 @@ Mueve una imagen a otra carpeta manteniendo el nombre.
 - Construye nuevo publicId como targetFolder/nombre
 - Retorna api.resource (no rename response)
 
-**Tests:** 9 tests con validaciones contractuales
-
----
-
 ### 6. changeImagePrefix
 Manipula el prefijo de una imagen con tres modos de operación.
 
@@ -149,18 +146,16 @@ Manipula el prefijo de una imagen con tres modos de operación.
 
 **Modos:**
 - `replace`: Reemplaza prefijo existente por uno nuevo
-- `append`: Agrega prefijo al final del existente (con guión)
-- `prepend`: Agrega prefijo al inicio del existente (con guión)
+- `append`: Agrega prefijo al final del existente (con `--`)
+- `prepend`: Agrega prefijo al inicio del existente (con `--`)
 
 **Características:**
 - Valida redundancia (no agregar prefijo que ya existe)
 - Maneja casos sin prefijo actual
-- Maneja casos de múltiples guiones
+- Convención de prefijo con separador `--`
+- Obtiene el prefijo desde metadata (no hace parsing del publicId)
+- Recalcula el publicId usando `folder/prefix--name`
 - Normaliza respuesta de Cloudinary
-
-**Tests:** 20 tests exhaustivos incluyendo edge cases
-
----
 
 ### 7. getImage
 Obtiene datos completos de una imagen por su `public_id`.
@@ -177,10 +172,6 @@ Obtiene datos completos de una imagen por su `public_id`.
 - Extrae metadata de context.custom
 - Metadata siempre es objeto {} si no existe
 - Incluye response raw de Cloudinary
-
-**Tests:** 100% tested
-
----
 
 ### 8. listImages
 Lista imágenes en un folder con paginación.
@@ -205,13 +196,6 @@ Lista imágenes en un folder con paginación.
 - 404 devuelve array vacío (no error)
 - Preserva orden de Cloudinary
 - Respeta limit incluso si Cloudinary devuelve más
-
-**Tests:** 27 tests exhaustivos cubriendo:
-- Validaciones de entrada
-- Casos de error (red, auth, servidor)
-- Paginación (cursor, nextCursor)
-- Filtrado (incompletos, non-images, subdirectorios)
-- Edge cases (folder vacío, recursos corruptos, límites)
 
 ---
 
@@ -282,29 +266,11 @@ Todas las clases de error extienden de la clase base apropiada y tienen mensaje 
 - **MoveImageError**: Fallo en mover imagen a otra carpeta
 - **FetchImageError**: Fallo en obtener/listar imágenes
 
-## Testing
+## Convenciones de publicId
 
-El módulo cuenta con test suite completo usando Jest:
-
-| Función | Tests | Cobertura |
-|---------|-------|-----------|
-| createImage | Completo | 100% |
-| deleteImage | Completo | 100% |
-| replaceImage | Completo | 100% |
-| renameImage | 9 tests | Completo |
-| moveImage | 9 tests | Completo |
-| changeImagePrefix | 20 tests | Completo |
-| getImage | Completo | 100% |
-| listImages | 27 tests | Completo |
-
-### Filosofía de Testing
-
-Los tests siguen principios de **contract testing** (no mechanics testing):
-- Validan comportamiento y garantías del módulo
-- No validan detalles de implementación
-- Cloudinary es mock, nunca se hacen llamadas reales
-- Tests de idempotencia solo cuando es garantía del módulo
-- Source of truth: siempre se valida contra api.resource
+- `createImage` normaliza `folder`, `name` y `prefix`.
+- Para operaciones con `publicId` existente, el módulo usa `name`, `folder` y `prefix` guardados en metadata.
+- Formato final: `directorios/prefix--name` (prefix opcional).
 
 ## Uso
 
@@ -319,7 +285,7 @@ const result = await createImage(
   { source: 'upload', userId: '123' }
 );
 
-// result.publicId = 'users/avatar-profile'
+// result.publicId = 'users/avatar--profile'
 // result.metadata = { source: 'upload', userId: '123' }
 ```
 
@@ -353,21 +319,21 @@ if (result.nextCursor) {
 ```typescript
 import { changeImagePrefix } from './cloudinary';
 
-// Replace: user-admin-profile → company-admin-profile
+// Replace: user--admin-profile → company--admin-profile
 await changeImagePrefix({
-  publicId: 'users/user-admin-profile',
+  publicId: 'users/user--admin-profile',
   prefix: 'company',
   mode: 'replace'
 });
 
-// Append: admin-profile → admin-profile-verified
+// Append: admin-profile → admin-profile--verified
 await changeImagePrefix({
   publicId: 'users/admin-profile',
   prefix: 'verified',
   mode: 'append'
 });
 
-// Prepend: admin-profile → special-admin-profile
+// Prepend: admin-profile → special--admin-profile
 await changeImagePrefix({
   publicId: 'users/admin-profile',
   prefix: 'special',
@@ -392,7 +358,7 @@ cloudinary.config({
 
 ## Diagrama de Funcionalidades
 
-Ver [cloudinary-module.puml](./docs/cloudinary-module.puml) para diagrama PlantUML completo.
+Ver [plantuml-test.puml](./docs/plantuml-test.puml) para diagrama PlantUML (en progreso).
 
 ## Contribución
 

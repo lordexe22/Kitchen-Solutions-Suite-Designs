@@ -1,7 +1,7 @@
 // list-images.test.ts
 /* #info - Jest test for Cloudinary listImages */
 // #section Imports
-import { listImages, createImage } from '../cloudinary';
+import { listImages } from '../cloudinary';
 import {
 	ConfigurationError,
 	FetchImageError,

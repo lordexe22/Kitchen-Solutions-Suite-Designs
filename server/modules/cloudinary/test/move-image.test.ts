@@ -10,6 +10,7 @@ import {	ConfigurationError,
 import * as cloudinaryConfig from '../cloudinary.config';
 // #end-section
 
+
 // #section Tests
 describe('Cloudinary - moveImage', () => {
 	// #test - validaciones de entrada
@@ -66,10 +67,12 @@ describe('Cloudinary - moveImage', () => {
 			format: 'jpg',
 			bytes: 10,
 			resource_type: 'image',
+			context: { custom: { name: 'name', folder: 'folder' } },
 		});
+		const update = jest.fn().mockResolvedValue({});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update } } as any);
 
 		await moveImage({ publicId: 'folder/name', targetFolder: 'target-folder' });
 
@@ -100,11 +103,12 @@ describe('Cloudinary - moveImage', () => {
 			format: 'jpg',
 			bytes: 10,
 			resource_type: 'image',
-			context: { custom: { source: 'test' } },
+			context: { custom: { source: 'test', name: 'name', folder: 'folder' } },
 		});
+		const update = jest.fn().mockResolvedValue({});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update } } as any);
 
 		const result = await moveImage({ publicId: 'folder/name', targetFolder: 'target-folder' });
 
@@ -116,8 +120,9 @@ describe('Cloudinary - moveImage', () => {
 		expect(result.height).toBe(200);
 		expect(result.format).toBe('jpg');
 		expect(result.bytes).toBe(10);
-		expect(apiResource).toHaveBeenCalledTimes(1);
-		expect(apiResource).toHaveBeenCalledWith('target-folder/name', { resource_type: 'image', context: true });
+		expect(apiResource).toHaveBeenCalledTimes(2);
+		expect(apiResource).toHaveBeenNthCalledWith(1, 'folder/name', { resource_type: 'image', context: true });
+		expect(apiResource).toHaveBeenNthCalledWith(2, 'target-folder/name', { resource_type: 'image', context: true });
 
 		spy.mockRestore();
 	});
@@ -130,10 +135,20 @@ describe('Cloudinary - moveImage', () => {
 	 */
 	test('no mueve si el path completo del targetFolder es idéntico', async () => {
 		const rename = jest.fn();
-		const apiResource = jest.fn();
+		const apiResource = jest.fn().mockResolvedValue({
+			public_id: 'folder/sub/name',
+			url: 'http://example.com/a.jpg',
+			secure_url: 'https://example.com/a.jpg',
+			width: 100,
+			height: 200,
+			format: 'jpg',
+			bytes: 10,
+			resource_type: 'image',
+			context: { custom: { name: 'name', folder: 'folder/sub' } },
+		});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update: jest.fn() } } as any);
 
 		await expect(
 			moveImage({ publicId: 'folder/sub/name', targetFolder: 'folder/sub' })
@@ -152,9 +167,20 @@ describe('Cloudinary - moveImage', () => {
 	 */
 	test('falla con NotFoundError si el recurso no existe', async () => {
 		const rename = jest.fn().mockRejectedValue({ error: { http_code: 404 } });
+		const apiResource = jest.fn().mockResolvedValue({
+			public_id: 'folder/name',
+			url: 'http://example.com/a.jpg',
+			secure_url: 'https://example.com/a.jpg',
+			width: 100,
+			height: 200,
+			format: 'jpg',
+			bytes: 10,
+			resource_type: 'image',
+			context: { custom: { name: 'name', folder: 'folder' } },
+		});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update: jest.fn() } } as any);
 
 		await expect(moveImage({ publicId: 'folder/name', targetFolder: 'target-folder' }))
 			.rejects.toBeInstanceOf(NotFoundError);
@@ -170,9 +196,20 @@ describe('Cloudinary - moveImage', () => {
 	 */
 	test('falla con MoveImageError si el target existe', async () => {
 		const rename = jest.fn().mockRejectedValue({ error: { message: 'already exists' } });
+		const apiResource = jest.fn().mockResolvedValue({
+			public_id: 'folder/name',
+			url: 'http://example.com/a.jpg',
+			secure_url: 'https://example.com/a.jpg',
+			width: 100,
+			height: 200,
+			format: 'jpg',
+			bytes: 10,
+			resource_type: 'image',
+			context: { custom: { name: 'name', folder: 'folder' } },
+		});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update: jest.fn() } } as any);
 
 		await expect(moveImage({ publicId: 'folder/name', targetFolder: 'target-folder' }))
 			.rejects.toBeInstanceOf(MoveImageError);

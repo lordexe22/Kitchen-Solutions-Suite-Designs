@@ -6,6 +6,7 @@ import { ConfigurationError, UploadError, ValidationError } from '../cloudinary.
 import * as cloudinaryConfig from '../cloudinary.config';
 // #end-section
 
+
 // #describe Tests
 describe('Cloudinary - createImage', () => {
   // #test - falla cuando faltan parámetros
@@ -130,7 +131,7 @@ describe('Cloudinary - createImage', () => {
     // #end-step
 
     // #step 2 - Validar publicId
-    expect(result.publicId).toBe('my-folder/design-tests/company-logo-my-image');
+    expect(result.publicId).toBe('my-folder/design-tests/company-logo--my-image');
     // #end-step
   }, 30000);
   // #end-test
@@ -329,13 +330,14 @@ describe('Cloudinary - createImage', () => {
    */
   test('retorna metadata vacío cuando se envía un objeto vacío', async () => {
     // #step 1 - Ejecutar upload con metadata vacío
+    const name = `create-${Date.now()}`;
     const result = await createImage(
       {
         type: 'url',
         url: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
       },
       {
-        name: `create-${Date.now()}`,
+        name,
         folder: 'kitchen-solutions-suite/design-tests',
         overwrite: true,
       },
@@ -344,7 +346,10 @@ describe('Cloudinary - createImage', () => {
     // #end-step
 
     // #step 2 - Validar metadata
-    expect(result.metadata).toEqual({});
+    expect(result.metadata).toEqual({
+      name,
+      folder: 'kitchen-solutions-suite/design-tests',
+    });
     // #end-step
   }, 30000);
   // #end-test

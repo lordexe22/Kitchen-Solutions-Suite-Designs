@@ -6,6 +6,7 @@ import { DeleteError, NotFoundError, ValidationError } from '../cloudinary.error
 import * as cloudinaryConfig from '../cloudinary.config';
 // #end-section
 
+
 // #describe Tests
 describe('Cloudinary - deleteImage', () => {
 	// #test - falla con publicId vacío

@@ -10,6 +10,7 @@ import {	ConfigurationError,
 import * as cloudinaryConfig from '../cloudinary.config';
 // #end-section
 
+
 // #section Tests
 describe('Cloudinary - getImage', () => {
 	// #test - validaciones de input

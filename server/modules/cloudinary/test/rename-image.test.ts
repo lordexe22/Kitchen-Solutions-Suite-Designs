@@ -10,6 +10,7 @@ import {	ConfigurationError,
 import * as cloudinaryConfig from '../cloudinary.config';
 // #end-section
 
+
 // #section Tests
 describe('Cloudinary - renameImage', () => {
 	// #test - validaciones de entrada
@@ -66,10 +67,12 @@ describe('Cloudinary - renameImage', () => {
 			format: 'jpg',
 			bytes: 10,
 			resource_type: 'image',
+			context: { custom: { name: 'name', folder: 'folder' } },
 		});
+		const update = jest.fn().mockResolvedValue({});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update } } as any);
 
 		await renameImage({ publicId: 'folder/name', newName: 'new-name' });
 
@@ -101,11 +104,12 @@ describe('Cloudinary - renameImage', () => {
 			format: 'jpg',
 			bytes: 10,
 			resource_type: 'image',
-			context: { custom: { source: 'test' } },
+			context: { custom: { source: 'test', name: 'name', folder: 'folder' } },
 		});
+		const update = jest.fn().mockResolvedValue({});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update } } as any);
 
 		const result = await renameImage({ publicId: 'folder/name', newName: 'new-name' });
 
@@ -117,8 +121,9 @@ describe('Cloudinary - renameImage', () => {
 		expect(result.height).toBe(200);
 		expect(result.format).toBe('jpg');
 		expect(result.bytes).toBe(10);
-		expect(apiResource).toHaveBeenCalledTimes(1);
-		expect(apiResource).toHaveBeenCalledWith('folder/new-name', { resource_type: 'image', context: true });
+		expect(apiResource).toHaveBeenCalledTimes(2);
+		expect(apiResource).toHaveBeenNthCalledWith(1, 'folder/name', { resource_type: 'image', context: true });
+		expect(apiResource).toHaveBeenNthCalledWith(2, 'folder/new-name', { resource_type: 'image', context: true });
 
 		spy.mockRestore();
 	});
@@ -133,7 +138,17 @@ describe('Cloudinary - renameImage', () => {
 		const rename = jest.fn().mockRejectedValue({ error: { http_code: 404 } });
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: jest.fn().mockResolvedValue({
+				public_id: 'folder/name',
+				url: 'http://example.com/a.jpg',
+				secure_url: 'https://example.com/a.jpg',
+				width: 100,
+				height: 200,
+				format: 'jpg',
+				bytes: 10,
+				resource_type: 'image',
+				context: { custom: { name: 'name', folder: 'folder' } },
+			}), update: jest.fn() } } as any);
 
 		await expect(renameImage({ publicId: 'folder/name', newName: 'new-name' }))
 			.rejects.toBeInstanceOf(NotFoundError);
@@ -151,7 +166,17 @@ describe('Cloudinary - renameImage', () => {
 		const rename = jest.fn().mockRejectedValue({ error: { message: 'already exists' } });
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: jest.fn().mockResolvedValue({
+				public_id: 'folder/name',
+				url: 'http://example.com/a.jpg',
+				secure_url: 'https://example.com/a.jpg',
+				width: 100,
+				height: 200,
+				format: 'jpg',
+				bytes: 10,
+				resource_type: 'image',
+				context: { custom: { name: 'name', folder: 'folder' } },
+			}), update: jest.fn() } } as any);
 
 		await expect(renameImage({ publicId: 'folder/name', newName: 'new-name' }))
 			.rejects.toBeInstanceOf(RenameImageError);
@@ -178,10 +203,12 @@ describe('Cloudinary - renameImage', () => {
 			format: 'jpg',
 			bytes: 10,
 			resource_type: 'image',
+			context: { custom: { name: 'name', folder: 'folder' } },
 		});
+		const update = jest.fn().mockResolvedValue({});
 		const spy = jest
 			.spyOn(cloudinaryConfig, 'getCloudinaryClient')
-			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource } } as any);
+			.mockReturnValue({ uploader: { rename }, api: { resource: apiResource, update } } as any);
 
 		// Primera llamada exitosa
 		await renameImage({ publicId: 'folder/name', newName: 'new-name' });

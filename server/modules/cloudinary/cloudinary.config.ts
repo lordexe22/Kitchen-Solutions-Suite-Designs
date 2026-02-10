@@ -5,6 +5,9 @@ import 'dotenv/config';
 import { v2 as cloudinary } from 'cloudinary';
 import { ConfigurationError } from './cloudinary.errors';
 // #end-section
+
+let cachedClient: typeof cloudinary | null = null;
+let cachedConfigKey: string | null = null;
 // #function getCloudinaryClient - Obtiene una instancia configurada del cliente de Cloudinary
 /**
  * Obtiene una instancia configurada del cliente de Cloudinary.
@@ -27,6 +30,11 @@ export const getCloudinaryClient = (): typeof cloudinary => {
 	}
 	// #end-step
 
+	const configKey = `${cloudName}:${apiKey}:${apiSecret}`;
+	if (cachedClient && cachedConfigKey === configKey) {
+		return cachedClient;
+	}
+
 	// #step 3 - Configurar SDK
 	cloudinary.config({
 		cloud_name: cloudName,
@@ -37,6 +45,8 @@ export const getCloudinaryClient = (): typeof cloudinary => {
 	// #end-step
 
 	// #step 4 - Retornar cliente configurado
+	cachedClient = cloudinary;
+	cachedConfigKey = configKey;
 	return cloudinary;
 	// #end-step
 };

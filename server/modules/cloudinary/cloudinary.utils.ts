@@ -116,19 +116,89 @@ export const _buildPublicId = (
 	folder: string,
 	name: string,
 	prefix?: string
-): { folder: string; publicId: string } => {
+): { folder: string; publicId: string; name: string; prefix?: string } => {
 	const normalizedFolder = _normalizeFolder(folder);
 	const normalizedName = _normalizePublicIdPart(name);
 	const normalizedPrefix = prefix ? _normalizePublicIdPart(prefix) : '';
 	const publicId = normalizedPrefix
-		? `${normalizedPrefix}-${normalizedName}`
+		? `${normalizedPrefix}--${normalizedName}`
 		: normalizedName;
 
 	if (!normalizedFolder || !publicId) {
 		throw new ValidationError('Folder o nombre inválido tras normalización.');
 	}
 
-	return { folder: normalizedFolder, publicId };
+	return {
+		folder: normalizedFolder,
+		publicId,
+		name: normalizedName,
+		prefix: normalizedPrefix || undefined,
+	};
+};
+// #end-function
+
+// #function _buildPublicIdFromIdentity - Construye publicId desde metadata
+/**
+ * Construye publicId desde metadata almacenada (folder, name, prefix).
+ * @param identity Identidad almacenada en metadata
+ * @returns publicId
+ * @version 1.0.0
+ */
+export const _buildPublicIdFromIdentity = (identity: {
+	folder: string;
+	name: string;
+	prefix?: string;
+}): string => {
+	const baseName = identity.prefix
+		? `${identity.prefix}--${identity.name}`
+		: identity.name;
+
+	return identity.folder ? `${identity.folder}/${baseName}` : baseName;
+};
+// #end-function
+
+// #function _getStoredIdentity - Extrae identidad desde metadata
+/**
+ * Extrae identidad (name, folder, prefix) desde metadata.
+ * @param metadata Metadata custom
+ * @param publicId PublicId del recurso
+ * @throws ValidationError si falta metadata requerida
+ * @version 1.0.0
+ */
+export const _getStoredIdentity = (
+	metadata: Record<string, any>,
+	publicId: string
+): { name: string; folder: string; prefix?: string } => {
+	const name = metadata?.name;
+	const folder = metadata?.folder;
+	const prefix = metadata?.prefix;
+
+	if (typeof name !== 'string' || !name.trim()) {
+		throw new ValidationError(`Metadata incompleta: falta name para ${publicId}.`);
+	}
+
+	_validateNameSegment(name, 'name');
+
+	if (folder !== undefined && folder !== null && typeof folder !== 'string') {
+		throw new ValidationError(`Metadata incompleta: folder inválido para ${publicId}.`);
+	}
+
+	if (folder) {
+		_validateFolderPath(folder);
+	}
+
+	if (prefix !== undefined && prefix !== null) {
+		if (typeof prefix !== 'string' || !prefix.trim()) {
+			throw new ValidationError(`Metadata incompleta: prefix inválido para ${publicId}.`);
+		}
+		_validateNameSegment(prefix, 'prefix');
+	}
+
+	return {
+		name,
+		folder: folder || '',
+		prefix: prefix || undefined,
+	};
 };
 // #end-function
 // #function _validatePublicId - Valida formato de publicId
