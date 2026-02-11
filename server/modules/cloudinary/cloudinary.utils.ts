@@ -142,7 +142,6 @@ export const _buildPublicId = (
 	};
 };
 // #end-function
-
 // #function _buildPublicIdFromIdentity - Construye publicId desde metadata
 /**
  * Construye publicId desde metadata almacenada (folder, name, prefix).
@@ -163,7 +162,6 @@ export const _buildPublicIdFromIdentity = (identity: {
 	return identity.folder ? `${identity.folder}/${baseName}` : baseName;
 };
 // #end-function
-
 // #function _getStoredIdentity - Extrae identidad desde metadata
 /**
  * Extrae identidad (name, folder, prefix) desde metadata.

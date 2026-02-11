@@ -46,7 +46,6 @@ import {
 	MoveImageError,
 } from './cloudinary.errors';
 // #end-section
-
 // #function createImage - Sube una imagen a Cloudinary y retorna datos normalizados
 /**
  * Sube una imagen a Cloudinary y retorna la respuesta normalizada.
@@ -553,7 +552,6 @@ export const getImage = async (publicId: string): Promise<GetImageResult> => {
 	// #step 1 - Validar publicId
 	_validatePublicId(publicId);
 	// #end-step
-
 	// #step 2 - Consultar recurso
 	const cloudinary = getCloudinaryClient();
 	try {
