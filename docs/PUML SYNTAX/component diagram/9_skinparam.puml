@@ -1,0 +1,50 @@
+@startuml skinparam
+
+' You can use the skinparam command to change colors and fonts for the drawing. 
+
+skinparam interface {
+  backgroundColor RosyBrown
+  borderColor orange
+}
+
+skinparam component {
+  FontSize 13
+  BackgroundColor<<Apache>> Pink
+  BorderColor<<Apache>> #FF6655
+  FontName Courier
+  BorderColor black
+  BackgroundColor gold
+  ArrowFontName Impact
+  ArrowColor #FF6655
+  ArrowFontColor #777777
+}
+
+() "Data Access" as DA
+Component "Web Server" as WS << Apache >>
+
+DA - [First Component]
+[First Component] ..> () HTTP : use
+HTTP - WS
+
+
+skinparam component {
+  backgroundColor<<static lib>> DarkKhaki
+  backgroundColor<<shared lib>> Green
+}
+
+skinparam node {
+  borderColor Green
+  backgroundColor Yellow
+  backgroundColor<<shared_node>> Magenta
+}
+skinparam databaseBackgroundColor Aqua
+
+[AA] <<static lib>>
+[BB] <<shared lib>>
+[CC] <<static lib>>
+
+node node1
+node node2 <<shared_node>>
+database Production
+
+@enduml

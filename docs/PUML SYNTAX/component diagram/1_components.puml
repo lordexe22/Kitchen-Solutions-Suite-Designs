@@ -1,0 +1,12 @@
+@startuml components
+
+' Ejemplos de como declarar componentes
+
+[First component]
+
+' se puede usar un alias para referirse al componente posteriormente
+[Another component] as Comp2 
+component Comp3
+component [Last\ncomponent] as Comp4
+
+@enduml

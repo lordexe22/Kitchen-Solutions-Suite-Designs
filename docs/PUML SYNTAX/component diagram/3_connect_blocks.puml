@@ -1,0 +1,10 @@
+@startuml Connect blocks
+
+' Links between elements are made using combinations of dotted line (..), straight line (--), and arrows (-->) symbols. 
+
+' first block + connection type + second block + connection text?
+
+DataAccess - [First Component]
+[First Component] ..> HTTP : use
+
+@enduml

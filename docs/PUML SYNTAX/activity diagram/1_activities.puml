@@ -1,0 +1,13 @@
+@startuml activities
+
+' Activities label starts with : and ends with ;. 
+
+' :Hello world;
+' :This is defined on
+' several **lines**;
+
+' - Action 1
+' - Action 2
+' - Action 3
+
+@enduml

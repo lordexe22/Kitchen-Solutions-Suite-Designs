@@ -1,0 +1,14 @@
+@startuml start and stop
+start
+:Hello world;
+:This is defined on
+several **lines**;
+stop
+
+start
+:Hello world;
+:This is defined on
+several **lines**;
+end
+
+@enduml

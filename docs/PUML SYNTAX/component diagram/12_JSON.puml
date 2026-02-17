@@ -1,0 +1,9 @@
+@startuml JSON
+
+json JSON {
+   "fruit":"Apple",
+   "size":"Large",
+   "color": ["Red", "Green"]   
+}
+
+@enduml

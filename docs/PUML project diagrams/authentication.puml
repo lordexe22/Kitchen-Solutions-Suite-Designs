@@ -1,0 +1,70 @@
+@startuml Authentication
+title Express Auth Architecture - Component Diagram
+
+package "Client Layer" #LightCoral {
+    component "Client Application" as Client
+}
+
+folder "Server Layer (Express App)" #LightGreen {
+
+    component "Express Server" as Express
+
+    folder "Routes" #LightYellow {
+        component "Auth Routes" as AuthRoutes
+    }
+
+    folder "Middlewares" #LightYellow {
+        component "Register Middleware" as RegisterMW
+        component "Login Middleware" as LoginMW
+        component "AutoLogin Middleware" as AutoLoginMW
+        component "Logout Middleware" as LogoutMW
+    }
+
+    folder "Services" #LightYellow {
+        folder "Auth Services" #Yellow{
+            component "Register Service" as RegisterService
+            component "Login Service" as LoginService
+            component "AutoLogin Service" as AutoLoginService
+            component "Logout Service" as LogoutService
+        }
+    }
+
+    folder "Libraries / Utils" #LightYellow {
+        component "JWT Cookie Manager" as JWTManager
+        component "Password Utils" as PasswordUtils
+    }
+
+    component "Drizzle ORM" as ORM
+
+}
+
+package "Persistence Layer" #LightBlue {
+    database "Database" as DB
+}
+
+Client --> Express : HTTP Request
+
+Express --> AuthRoutes
+
+AuthRoutes --> RegisterMW
+AuthRoutes --> LoginMW
+AuthRoutes --> AutoLoginMW
+AuthRoutes --> LogoutMW
+
+RegisterMW --> RegisterService
+LoginMW --> LoginService
+AutoLoginMW --> AutoLoginService
+LogoutMW --> LogoutService
+
+RegisterService --> ORM
+LoginService --> ORM
+AutoLoginService --> ORM
+
+RegisterService --> JWTManager
+LoginService --> JWTManager
+
+RegisterService --> PasswordUtils
+
+ORM --> DB
+
+@enduml

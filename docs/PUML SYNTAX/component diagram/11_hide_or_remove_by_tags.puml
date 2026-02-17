@@ -1,0 +1,17 @@
+@startuml Hide or remove by tags
+
+'  You can put $tags (using $) on components, then remove, hide or restore components either individually or by tags. 
+
+component C1 $tag13 $tag1
+component C2
+component C3 $tag13
+C1 -- C2
+
+' hide $tag13
+
+' Se puede afectar a todos usando el comodín * (ej: remove *)
+
+remove $tag13
+restore $tag1
+
+@enduml

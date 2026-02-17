@@ -10,5 +10,5 @@
     "types": ["node", "jest"],
     "resolveJsonModule": true
   },
-  "include": ["server/**/*.ts", "jest.config.ts"]
+  "include": ["server/**/*.ts", "client/**/*.ts", "jest.config.ts"]
 }

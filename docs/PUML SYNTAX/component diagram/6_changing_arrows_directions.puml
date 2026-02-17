@@ -1,0 +1,20 @@
+@startuml changeing arrow directions
+  'By default, links between classes have two dashes -- and are vertically oriented. It is possible to use horizontal link by putting a single dash (or dot) like this: 
+
+[component 1] as C1
+[component 2] as C2
+() "interface" as I1
+() "interface 2" as I2
+
+C1 -> I1
+C1 --> I2
+I1 --> C2
+I2 -> C2
+
+
+[Component] -left-> left
+[Component] -right-> right
+[Component] -up-> up
+[Component] -down-> down
+
+@enduml

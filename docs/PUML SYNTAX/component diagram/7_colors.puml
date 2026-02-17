@@ -1,0 +1,21 @@
+@startuml colors
+
+component  [Web Server] #Yellow
+
+interface "Interface 1" as I1 #LightBlue
+
+cloud #blue {
+  [Cloud Component] #LightGreen
+}
+
+database "MySql" #LightPink {
+  folder "This is my folder" {
+    [Folder 3] #LightYellow
+  }
+  frame "Foo" {
+    [Frame 4] #LightGray
+  }
+}
+
+
+@enduml
