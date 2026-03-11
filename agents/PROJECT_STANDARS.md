@@ -1,3 +1,26 @@
+# Introducción
+
+El objetivo de este archivo es el poder darle contexto al agente de inteligencia artificial que va a operar trabajando en el proyecto. Se van a exponer las diferentes categorías y dónde encontrar más información al respecto de cada una de ellas. También se va a dar información general para obtener un contexto de cómo trabajar de manera global, siguiendo determinados estándares.
+
+# Información base
+
+* **Nombre del proyecto**: Kitchen Solutions Suite
+* **Ubicación del frontend**: kitchen-solutions-suite/kitchen-solutions-suite-app/
+* **Ubicación del backend**: kitchen-solutions-suite/kitchen-solutions-suite-server/
+* **Ubicación de los archivos de diseño**: kitchen-solutions-suite-design/
+
+# Archivos que deben ser leidos y tenidos en cuenta de manera global
+
+## Contenido del directorio estructura/
+
+* **estructura-general.md**: explica como se extruturan los proyectos en terminos generales, no se incluyen las convenciones especificas y propias del proyecto "frontend" y "backend", estas últimas tienen sus secciones correspondientes.
+* **estructura-frontend.md**: explica las convenciones propias que solo existiran dentro del proyecto de frontend.  
+* **estructura-backend.md**: explica las convenciones propias que solo existiran dentro del proyecto de frontend.  
+
+
+
+
+# LO QUE YA EXISTIA
 # Project Standard (general design rules)
 
 Este documento es una guia interna con reglas generales que ya se usan en el modulo Cloudinary y deben replicarse en nuevos modulos, utilidades o servicios. El foco es estructural y de convenciones, no en logica concreta del dominio.
