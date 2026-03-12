@@ -1,22 +1,74 @@
 # Estructura General del Proyecto
 
-Se comparte a continuación cómo es la estructura de carpetas que va a estar presente en el proyecto del cliente y del servidor. Estas carpetas son comunes a ambos proyectos y deben respetar las mismas reglas de diseño y uso en ambos casos.
+Este documento resume las carpetas estandarizadas del proyecto y referencia todos los documentos de esta carpeta.
 
-Las reglas específicas para cada carpeta están documentadas en los archivos Markdown correspondientes:
-- **lib**: [lib.md](lib.md)
-- **services**: [services.md](services.md)
-- **modules**: [modules.md](modules.md)
-- **utils**: [utils.md](utils.md)
+Objetivo:
+- Unificar criterios de organización.
+- Diferenciar claramente qué aplica al frontend, al backend y a ambos.
+- Servir como índice rápido de las reglas de arquitectura.
 
-Es importante que, antes de comenzar cualquier trabajo, leas estos documentos para comprender la filosofía de la arquitectura de archivos y asegurarte de respetar las reglas establecidas al crear nuevo contenido.
+## Índice de Documentos
 
-La estructura general es la siguiente:
+### Comunes a Frontend y Backend
+- Librerías internas reutilizables: [lib.md](lib.md)
+- Módulos del sistema: [modules.md](modules.md)
+- Servicios: [services.md](services.md)
+- Utilidades técnicas: [utils.md](utils.md)
+
+### Frontend
+- Componentes: [component.md](component.md)
+- Hooks: [hooks.md](hooks.md)
+- Pages: [pages.md](pages.md)
+- Store: [store.md](store.md)
+- Widgets: [widgets.md](widgets.md)
+
+### Backend
+- Rutas HTTP: [routes.md](routes.md)
+- Middlewares: [middlewares.md](middlewares.md)
+
+## Estructuras por Plataforma
+
+### Estructura Base Común
 
 ```
 src
 ┣ lib
+┣ modules
+┣ services
+┗ utils
+```
+
+### Estructura Típica Frontend
+
+```
+src
+┣ components
+┣ hooks
+┣ pages
+┣ store
+┣ widgets
+┣ modules
+┣ services
+┣ utils
+┗ lib
+```
+
+### Estructura Típica Backend
+
+```
+src
+┣ routes
+┣ middlewares
 ┣ services
 ┣ modules
-└ utils
+┣ utils
+┗ lib
 ```
+
+## Regla de Uso
+
+Antes de crear o modificar código:
+1. Identificar si el cambio pertenece a frontend, backend o a una capa común.
+2. Aplicar la guía específica de la carpeta objetivo.
+3. Verificar que las dependencias respeten la jerarquía arquitectónica definida.
 
