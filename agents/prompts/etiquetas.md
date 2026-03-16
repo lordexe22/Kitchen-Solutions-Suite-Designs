@@ -61,6 +61,7 @@ Esto lo hace especialmente poderoso porque permite localizar mucho más rapidame
 | `event` | Encapsula un manejador de eventos o emisor. |
 | `type` | Encapsula la declaración de un type de TypeScript. |
 | `interface` | Encapsula la declaración de una interface de TypeScript. |
+| `enum` | Encapsula la declaración de un enum de TypeScript. |
 | `v-field` | Encapsula un campo de variable dentro de un objeto, clase, interfaz o tipo. |
 | `f-field` | Encapsula un campo de método/función dentro de un objeto, clase, interfaz o tipo. |
 | `style` | Encapsula un bloque de reglas CSS (usa selector como nombre). |
@@ -99,9 +100,9 @@ const validateUserInput = (data) => {
 // #end-function
 ```
 
-### type, interface
+### type, interface, enum
 
-Estas etiquetas estan destinadas para enmarcar tipos e interfaces, así como tambien los campos internos de las mismas.
+Estas etiquetas están destinadas para enmarcar tipos, interfaces y enums, así como también los campos internos de las mismas.
 
 #### Formato estándar:
 ```ts
