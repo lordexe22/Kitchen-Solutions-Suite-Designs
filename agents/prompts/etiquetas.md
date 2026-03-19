@@ -76,6 +76,15 @@ Esto lo hace especialmente poderoso porque permite localizar mucho más rapidame
 | `route` | Encapsula la definición de una ruta HTTP de backend (método + path). |
 | `state` | Encapsula una variable de estado de frontend (`useState`, `register`, etc.). |
 
+## Reglas globales de formato
+
+### Sin líneas vacías entre bloques consecutivos
+
+No deben existir líneas vacías entre bloques colapsables consecutivos del mismo nivel. Cuando dos o más bloques de cualquier tipo de etiqueta aparecen seguidos dentro del mismo contenedor (función, interfaz, tipo, archivo, etc.), deben estar uno inmediatamente a continuación del otro sin líneas en blanco de separación.
+
+Las líneas vacías **no están permitidas**.
+
+
 ## Funciones prácticas de las etiquetas
 
 ### function, middleware, service, hook, test, component, class, store, event
