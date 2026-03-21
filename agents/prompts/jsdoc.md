@@ -291,3 +291,55 @@ export async function createUser(input: CreateUserInput): Promise<User> {
   // implementación
 }
 ```
+
+## const / variable
+
+### Modelo
+
+```ts
+/**
+ * @description (obligatorio)
+ *
+ * @purpose (obligatorio)
+ *
+ * @context (obligatorio)
+ *
+ * @remarks (opcional)
+ *
+ * @example (opcional)
+ *
+ * @see (opcional)
+ *
+ * @since (obligatorio)
+ *
+ * @author (obligatorio)
+ */
+```
+
+---
+
+### Reglas específicas
+
+- `@description` debe describir qué dato o valor representa la constante/variable, no su tipo.
+- `@purpose` debe justificar por qué ese valor existe como constante independiente en lugar de estar inlined.
+- `@context` debe indicar qué módulos, funciones o componentes la consumen.
+- Si la constante es un objeto con campos, cada campo debe documentarse con `v-field` inline. El JSDoc del bloque no repite los campos.
+- `@remarks` se usa para decisiones de diseño relevantes sobre el valor concreto (ej: por qué se eligió ese valor por defecto).
+- `@param`, `@returns`, `@throws`, `@template`, `@invariants` y `@property` **no aplican** a constantes ni variables.
+
+---
+
+### Ejemplo
+
+```ts
+// #const DEFAULT_TIMEOUT - Tiempo máximo de espera global para todas las peticiones HTTP
+/**
+ * @description Valor en milisegundos utilizado como timeout por defecto en todas las peticiones HTTP.
+ * @purpose Centralizar el timeout base para evitar valores dispersos a lo largo del código.
+ * @context Consumido por HttpClient como fallback cuando una petición no define su propio timeout.
+ * @since 1.0.0
+ * @author my-dev-solutions
+ */
+export const DEFAULT_TIMEOUT = 10000;
+// #end-const
+```

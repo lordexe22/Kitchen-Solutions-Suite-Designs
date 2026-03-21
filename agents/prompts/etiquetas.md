@@ -78,6 +78,33 @@ Esto lo hace especialmente poderoso porque permite localizar mucho más rapidame
 
 ## Reglas globales de formato
 
+### Cabecera de ruta al inicio de cada archivo
+
+Todos los archivos del proyecto deben comenzar con un comentario de bloque que indique la ruta relativa del archivo desde `src/`. El formato obligatorio es:
+
+```ts
+/* src/ruta/hasta/el/archivo.ts */
+```
+
+**Reglas:**
+- Siempre se usa el formato de comentario de bloque `/* ... */`. Está **prohibido** usar `// src/...` para este propósito.
+- La ruta comienza en `src/` y refleja la ubicación exacta del archivo en el proyecto.
+- Este comentario debe ser la **primera línea** del archivo, antes de cualquier import, declaración o etiqueta.
+
+**Ejemplo correcto:**
+```ts
+/* src/modules/httpClient/httpClient.config.ts */
+
+import { ... } from "...";
+```
+
+**Ejemplo incorrecto (prohibido):**
+```ts
+// src/modules/httpClient/httpClient.config.ts
+```
+
+---
+
 ### Sin líneas vacías entre bloques consecutivos
 
 No deben existir líneas vacías entre bloques colapsables consecutivos del mismo nivel. Cuando dos o más bloques de cualquier tipo de etiqueta aparecen seguidos dentro del mismo contenedor (función, interfaz, tipo, archivo, etc.), deben estar uno inmediatamente a continuación del otro sin líneas en blanco de separación.
