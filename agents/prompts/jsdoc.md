@@ -144,7 +144,7 @@ Identifica **al autor responsable del elemento**.
  *
  * @purpose (obligatorio)
  *
- * @context (obligatorio)
+ * @context (condicional)
  *
  * @template (opcional)
  *
@@ -169,6 +169,8 @@ Identifica **al autor responsable del elemento**.
 - Cada propiedad debe documentarse inline directamente sobre el campo.
 
 - La documentación inline debe explicar el significado del dato dentro del modelo, no repetir el tipo.
+
+- `@context` es obligatorio cuando el tipo está ligado a un dominio o flujo específico del sistema. Se omite cuando el tipo es genérico o reutilizable sin contexto acotado (ej: `ApiResponse<T>`, `PaginationParams`).
 
 ---
 
@@ -483,7 +485,7 @@ export const Badge = ({ ... }: BadgeProps) => { ... }
 - `@context` es obligatorio solo cuando la clase forma parte de una capa, módulo o flujo específico del sistema. Se omite en clases utilitarias o de bajo nivel sin contexto arquitectónico relevante.
 - `@template` debe describir el rol del parámetro genérico dentro del modelo de la clase, no su restricción tipada. Una línea por parámetro.
 - `@invariants` documenta condiciones que deben mantenerse durante toda la vida del objeto, incluyendo tanto restricciones de estado interno como de uso externo (ej: "no llamar a `emit` antes de `init`").
-- `@remarks` debe indicar si la clase es instanciable, abstracta o estática, y si existe una forma esperada de uso (factory, singleton, herencia). No debe listar métodos ni describir lógica interna.
+- `@remarks` documenta consideraciones relevantes sobre la forma esperada de uso de la clase cuando aporten información no evidente en la declaración. Puede incluir restricciones o convenciones de diseño, por ejemplo: uso vía singleton, factory, extensión, resolución por DI o secuencia esperada de inicialización. No debe repetir información que TypeScript ya expresa en la sintaxis ni listar métodos o describir implementación interna.
 - La documentación de la clase no debe duplicar comportamiento específico de métodos. La clase define el modelo y propósito general; los métodos definen el comportamiento concreto.
 - Clases que solo contienen datos sin comportamiento significativo deben considerarse como `type` o `interface`. Si se mantienen como clase, `@purpose` debe justificar explícitamente su uso frente a una estructura de datos.
 
@@ -499,7 +501,7 @@ export const Badge = ({ ... }: BadgeProps) => { ... }
  * @context Utilizado por módulos del sistema que necesitan reaccionar a cambios de estado sin acoplarse al origen.
  * @template TEvents mapa de eventos disponibles y sus tipos de payload
  * @invariants Los listeners se invocan en el orden de suscripción. No debe llamarse a `emit` antes de que la instancia esté inicializada.
- * @remarks Clase instanciable diseñada para ser extendida. No usar como singleton en contextos con ciclos de vida distintos.
+ * @remarks Diseñada para ser extendida. No usar como singleton en contextos con ciclos de vida distintos.
  * @since 1.0.0
  * @author Walter Ezequiel Puig
  */
