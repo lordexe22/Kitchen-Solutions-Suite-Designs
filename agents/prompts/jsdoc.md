@@ -243,7 +243,7 @@ onClose: () => void;
 // #end-f-field
 ```
 
-## function / service / hook / event
+## function / service / hook / event / middleware
 
 ### Modelo
 
@@ -274,6 +274,7 @@ onClose: () => void;
 - `@remarks` se usa para aclaraciones que afectan el uso o comportamiento observable de la función.
 - `@example` se incluye solo cuando el uso no es evidente o hay ambigüedad.
 - No se documenta lógica interna, solo **comportamiento observable**.
+- En middleware, `@remarks` debe describir explícitamente el comportamiento del flujo, es decir, si continúa la cadena (next), si puede terminar la respuesta o si puede interrumpir con error.
 
 ### Ejemplo
 ```ts
@@ -313,6 +314,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
  * @since (obligatorio)
  *
  * @author (obligatorio)
+ * 
  */
 ```
 
@@ -342,4 +344,167 @@ export async function createUser(input: CreateUserInput): Promise<User> {
  */
 export const DEFAULT_TIMEOUT = 10000;
 // #end-const
+```
+
+## route
+
+### Modelo
+
+```ts
+/**
+ * @description (obligatorio)
+ * @purpose (obligatorio)
+ * @context (obligatorio)
+ * @input (opcional)
+ * @returns (obligatorio)
+ * @remarks (opcional)
+ * @since (obligatorio)
+ * @author (obligatorio)
+ */
+```
+
+---
+
+### Reglas específicas
+
+- `@input` sigue el formato fijo: `@input fuente: descripción`.
+- Las fuentes válidas son: `params` | `body` | `query`. Una línea por fuente.
+- `@input` no debe describir la estructura tipada de los datos. Solo debe indicar el rol del input dentro de la operación.
+- Los headers HTTP no se documentan aquí; se documentan en el middleware que los consume.
+- `@returns` documenta una línea por status HTTP posible, incluyendo tanto éxitos como errores.
+- `@returns` describe el status HTTP y el significado semántico de la respuesta. No debe incluir la estructura tipada del body.
+- `@throws` no aplica en `route`. Todos los resultados posibles se documentan en `@returns`.
+- `@remarks` se usa para aclaraciones sobre el comportamiento de la ruta (auth requerida, permisos, etc.).
+
+---
+
+### Ejemplo
+
+```ts
+// #route POST /companies - Crear una nueva compañía
+/**
+ * @description Recibe los datos de una nueva compañía y la persiste en el sistema.
+ * @purpose Exponer el endpoint de creación de compañías al cliente.
+ * @context Utilizado por el módulo de administración de compañías.
+ * @input body: datos necesarios para crear la compañía
+ * @returns 201 compañía creada con su identificador asignado
+ * @returns 422 datos inválidos en el body
+ * @returns 409 conflicto por duplicidad de nombre
+ * @since 1.0.0
+ * @author Walter Ezequiel Puig
+ */
+router.post('/companies', createCompanyHandler);
+// #end-route
+```
+
+## component
+
+### Modelo
+
+```ts
+/**
+ * @description (obligatorio)
+ * @purpose (condicional)
+ * @context (condicional)
+ * @remarks (opcional)
+ * @since (obligatorio)
+ * @author (obligatorio)
+ */
+```
+
+---
+
+### Reglas específicas
+
+- `@param`, `@returns` y `@throws` no aplican. Las props se documentan en su interfaz con `v-field` / `f-field`.
+- Si la información es evidente por el nombre del componente y sus props, no debe repetirse en la documentación.
+- `@description` debe describir qué renderiza el componente y qué problema visual o de interacción resuelve. No debe ser una reformulación del nombre del componente.
+- `@purpose` debe justificar por qué el componente existe como unidad independiente dentro del sistema. Es obligatorio cuando el componente abstrae lógica, evita duplicación o encapsula una responsabilidad clara. Se omite cuando es puramente presentacional y su razón de existir es evidente.
+- `@context` debe ubicar el componente dentro de una estructura concreta (layout, feature o módulo). Es obligatorio cuando el componente está ligado a un flujo o feature y su ubicación afecta su comportamiento. Se omite cuando es reutilizable sin contexto específico (ej: `Button`, `Input`). Expresiones genéricas como "usado en varias partes" no son válidas.
+- `@remarks` documenta únicamente: dependencias implícitas (providers requeridos), restricciones de uso y efectos no obvios. No debe contener descripciones de props, lógica interna ni comportamiento evidente desde el JSX.
+
+---
+
+### Ejemplo
+
+Componente con contexto y propósito definidos:
+
+```ts
+// #component UserAvatarMenu - Menú desplegable de acciones del usuario autenticado
+/**
+ * @description Muestra el avatar del usuario y despliega un menú de acciones al interactuar.
+ * @purpose Centralizar las acciones rápidas del usuario autenticado en un único punto de acceso del header.
+ * @context Layout principal, dentro del header de navegación de la aplicación.
+ * @remarks Requiere AuthProvider en el árbol padre. Consume el store de sesión activa.
+ * @since 1.0.0
+ * @author Walter Ezequiel Puig
+ */
+export const UserAvatarMenu = ({ ... }: UserAvatarMenuProps) => { ... }
+// #end-component
+```
+
+Componente presentacional reutilizable (`@purpose` y `@context` se omiten):
+
+```ts
+// #component Badge - Indicador visual de estado o categoría
+/**
+ * @description Renderiza una etiqueta con color y texto para representar un estado o categoría.
+ * @since 1.0.0
+ * @author Walter Ezequiel Puig
+ */
+export const Badge = ({ ... }: BadgeProps) => { ... }
+// #end-component
+```
+
+## class
+
+### Modelo
+
+```ts
+/**
+ * @description (obligatorio)
+ * @purpose (obligatorio)
+ * @context (condicional)
+ * @template (opcional)
+ * @invariants (opcional)
+ * @remarks (opcional)
+ * @since (obligatorio)
+ * @author (obligatorio)
+ */
+```
+
+---
+
+### Reglas específicas
+
+- `@param`, `@returns` y `@throws` no aplican a nivel de clase. El constructor solo se documenta con su propio bloque `#function constructor` si introduce lógica, validación o efectos relevantes. No se documenta si es trivial o implícito.
+- Los campos y métodos de la clase se documentan con `v-field` / `f-field` inline.
+- `@description` describe qué representa la clase dentro del sistema, no su estructura interna ni el comportamiento de sus métodos.
+- `@context` es obligatorio solo cuando la clase forma parte de una capa, módulo o flujo específico del sistema. Se omite en clases utilitarias o de bajo nivel sin contexto arquitectónico relevante.
+- `@template` debe describir el rol del parámetro genérico dentro del modelo de la clase, no su restricción tipada. Una línea por parámetro.
+- `@invariants` documenta condiciones que deben mantenerse durante toda la vida del objeto, incluyendo tanto restricciones de estado interno como de uso externo (ej: "no llamar a `emit` antes de `init`").
+- `@remarks` debe indicar si la clase es instanciable, abstracta o estática, y si existe una forma esperada de uso (factory, singleton, herencia). No debe listar métodos ni describir lógica interna.
+- La documentación de la clase no debe duplicar comportamiento específico de métodos. La clase define el modelo y propósito general; los métodos definen el comportamiento concreto.
+- Clases que solo contienen datos sin comportamiento significativo deben considerarse como `type` o `interface`. Si se mantienen como clase, `@purpose` debe justificar explícitamente su uso frente a una estructura de datos.
+
+---
+
+### Ejemplo
+
+```ts
+// #class EventEmitter - Emisor de eventos tipado para comunicación desacoplada entre módulos
+/**
+ * @description Gestiona la suscripción y emisión de eventos dentro de un contexto acotado.
+ * @purpose Desacoplar la comunicación entre módulos sin dependencias directas entre ellos.
+ * @context Utilizado por módulos del sistema que necesitan reaccionar a cambios de estado sin acoplarse al origen.
+ * @template TEvents mapa de eventos disponibles y sus tipos de payload
+ * @invariants Los listeners se invocan en el orden de suscripción. No debe llamarse a `emit` antes de que la instancia esté inicializada.
+ * @remarks Clase instanciable diseñada para ser extendida. No usar como singleton en contextos con ciclos de vida distintos.
+ * @since 1.0.0
+ * @author Walter Ezequiel Puig
+ */
+export class EventEmitter<TEvents extends Record<string, unknown>> {
+  // implementación
+}
+// #end-class
 ```
